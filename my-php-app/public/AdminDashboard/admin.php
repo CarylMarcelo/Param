@@ -23,8 +23,10 @@ requirePermission($currentUser, 'users.manage');
         <nav class="top-nav" aria-label="Main navigation">
             <a href="#users">Admin Users</a>
             <a href="#stocks">Stocks</a>
+            <a href="#applications">Applications</a>
             <a href="#reports">Reports</a>
             <a href="#audit">Audit Log</a>
+            <a href="../logout.php">Logout</a>
         </nav>
     </header>
 
@@ -34,20 +36,21 @@ requirePermission($currentUser, 'users.manage');
                 <h1>Admin Dashboard</h1>
             </div>
 
-            <form class="admin-form" id="adminForm">
+            <div class="admin-form">
                 <label for="admin_name">Currently logged in</label>
                 <div class="inline-fields">
-                    <input id="admin_name" name="admin_name" value="<?= htmlspecialchars($currentUser['first_name'] . ' ' . $currentUser['last_name']) ?>" required>
-                    <button type="submit">Change Admin Name</button>
+                    <input id="admin_name" value="<?= htmlspecialchars($currentUser['first_name'] . ' ' . $currentUser['last_name']) ?>" readonly>
                 </div>
-            </form>
+            </div>
 
             <nav class="side-nav">
                 <a href="#dashboard">Dashboard</a>
                 <a href="#users">Admin Users</a>
                 <a href="#stocks">Stocks and Prices</a>
+                <a href="#applications">Staff Applications</a>
                 <a href="#reports">Inventory Report</a>
                 <a href="#audit">Audit Log</a>
+                <a href="../logout.php">Logout</a>
             </nav>
         </aside>
 
@@ -171,6 +174,14 @@ requirePermission($currentUser, 'users.manage');
                 </div>
             </section>
 
+            <section id="applications" class="page-section">
+                <div class="section-title"><p>Staff Access</p><h2>Review Applications</h2></div>
+                <div class="table-wrap"><table>
+                    <thead><tr><th>Applicant</th><th>Contact</th><th>Requested Role</th><th>Details</th><th>Status / Action</th></tr></thead>
+                    <tbody id="applicationBody"></tbody>
+                </table></div>
+            </section>
+
             <section id="reports" class="page-section">
                 <div class="section-title">
                     <p>Reports</p>
@@ -198,10 +209,6 @@ requirePermission($currentUser, 'users.manage');
                 <div class="section-title">
                     <p>Reports</p>
                     <h2>Audit Log</h2>
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <button type="button" class="danger-button" id="clearAuditLog">Clear All</button>
                 </div>
 
                 <div class="table-wrap">

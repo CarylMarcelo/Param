@@ -9,6 +9,7 @@
     var stockList = document.getElementById('stockList');
     var reportBody = document.getElementById('reportBody');
     var auditLog = document.getElementById('auditLog');
+    var applicationBody = document.getElementById('applicationBody');
 
     var roles = []; // cached from GET ?resource=roles
 
@@ -120,11 +121,6 @@
         }).catch(function (err) { showNotice('Could not load users: ' + err); });
     }
 
-    document.getElementById('adminForm').addEventListener('submit', function (event) {
-        event.preventDefault();
-        showNotice('Admin name updated.');
-    });
-
     document.getElementById('addUserForm').addEventListener('submit', function (event) {
         event.preventDefault();
         var form = event.currentTarget;
@@ -181,15 +177,15 @@
 
     // ---- stocks ------------------------------------------------------------
     function makeStockRow(item) {
-        var row = document.createElement('div');
-        row.className = 'edit-row';
+        var row = document.createElement('form');
+        row.className = 'edit-row stock-row';
         row.dataset.productId = item.product_id;
         row.innerHTML =
-            '<span>' + safeText(item.product_name) + '</span>' +
-            '<span>' + safeText(item.category_name) + '</span>' +
-            '<span>PHP ' + Number(item.price).toFixed(2) + '</span>' +
-            '<span>' + item.stock_quantity + '</span>' +
-            '<div class="row-actions"><button type="button" class="danger-button delete-stock">Delete</button></div>';
+            '<label><span>Product</span><input name="name" value="' + safeText(item.product_name) + '" required></label>' +
+            '<label><span>Category</span><input name="category" value="' + safeText(item.category_name) + '" required></label>' +
+            '<label><span>Price</span><input type="number" name="price" min="0" step="0.01" value="' + Number(item.price).toFixed(2) + '" required></label>' +
+            '<label><span>Stock</span><input type="number" name="stock" min="0" step="1" value="' + item.stock_quantity + '" required></label>' +
+            '<div class="row-actions"><button type="submit" class="ghost-button">Update</button><button type="button" class="danger-button delete-stock">Delete</button></div>';
         return row;
     }
 
@@ -224,6 +220,17 @@
     }
 
     if (stockList) {
+        stockList.addEventListener('submit', function (event) {
+            if (!event.target.classList.contains('stock-row')) return;
+            event.preventDefault();
+            var row = event.target;
+            api('stock', { method: 'PUT', id: row.dataset.productId, body: {
+                name: row.elements.name.value.trim(), category: row.elements.category.value.trim(),
+                price: Number(row.elements.price.value), stock: Number(row.elements.stock.value)
+            }}).then(function () {
+                showNotice('Stock item updated.'); loadStock(); loadReport(); loadSummary(); loadAudit();
+            }).catch(function (err) { showNotice('Could not update stock item: ' + err); });
+        });
         stockList.addEventListener('click', function (event) {
             if (!event.target.classList.contains('delete-stock')) return;
             var row = event.target.closest('[data-product-id]');
@@ -236,6 +243,23 @@
             }).catch(function (err) { showNotice('Could not delete stock item: ' + err); });
         });
     }
+
+    function loadApplications() {
+        if (!applicationBody) return;
+        api('applications').then(function (rows) {
+            applicationBody.innerHTML = rows.map(function (item) {
+                var actions = item.status === 'pending' ? '<button type="button" data-review="approved">Approve</button> <button type="button" class="danger-button" data-review="rejected">Reject</button>' : safeText(titleCase(item.status));
+                return '<tr data-application-id="' + item.application_id + '"><td>' + safeText(item.complete_name) + '</td><td>' + safeText(item.email) + '<br>' + safeText(item.phone || '') + '</td><td>' + safeText(item.requested_role) + '</td><td>' + safeText(item.reason || item.experience || item.availability || '—') + '</td><td>' + actions + '</td></tr>';
+            }).join('');
+        }).catch(function (err) { showNotice('Could not load applications: ' + err); });
+    }
+    if (applicationBody) applicationBody.addEventListener('click', function (event) {
+        var status = event.target.dataset.review; if (!status) return;
+        var row = event.target.closest('[data-application-id]');
+        api('applications', { method: 'PUT', id: row.dataset.applicationId, body: { status: status } }).then(function () {
+            showNotice('Application ' + status + '.'); loadApplications(); loadAudit();
+        }).catch(function (err) { showNotice('Could not review application: ' + err); });
+    });
 
     // ---- reports -------------------------------------------------------------
     function loadReport() {
@@ -258,16 +282,6 @@
                     '</td><td>' + safeText(r.details || r.action_name) + '</td></tr>';
             }).join('');
         }).catch(function (err) { showNotice('Could not load audit log: ' + err); });
-    }
-
-    var clearAuditBtn = document.getElementById('clearAuditLog');
-    if (clearAuditBtn) {
-        clearAuditBtn.addEventListener('click', function () {
-            api('audit', { method: 'DELETE' }).then(function () {
-                showNotice('Audit log cleared.');
-                loadAudit();
-            }).catch(function (err) { showNotice('Could not clear audit log: ' + err); });
-        });
     }
 
     // ---- section nav (unchanged) ------------------------------------------
@@ -299,6 +313,7 @@
     loadSummary();
     loadRoles().then(loadUsers);
     loadStock();
+    loadApplications();
     loadReport();
     loadAudit();
 }());

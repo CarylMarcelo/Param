@@ -14,8 +14,13 @@ require_once __DIR__ . '/../src/middleware/authentication.php';
 require_once __DIR__ . '/../src/middleware/rbacmiddleware.php';
 require_once __DIR__ . '/../src/controllers/admin-controller.php';
 require_once __DIR__ . '/../src/controllers/product-controller.php';
+require_once __DIR__ . '/../src/controllers/application-controller.php';
 
 header('Content-Type: application/json');
+set_exception_handler(function (Throwable $exception): void {
+    if (http_response_code() < 400) http_response_code(500);
+    echo json_encode(['error' => $exception instanceof InvalidArgumentException ? $exception->getMessage() : 'Server request failed']);
+});
 
 $user     = requireLoginOrJson401();
 $resource = $_GET['resource'] ?? '';
@@ -63,14 +68,25 @@ switch ($resource) {
             echo json_encode(ProductController::listStock());
         } elseif ($method === 'POST') {
             requirePermission($user, 'inventory.manage');
-            echo json_encode(ProductController::createStockItem($input));
+            echo json_encode(ProductController::createStockItem($input, (int) $user['user_id']));
+        } elseif ($method === 'PUT' && $id) {
+            requirePermission($user, 'inventory.manage');
+            requirePermission($user, 'prices.manage');
+            echo json_encode(ProductController::updateStockItem($id, $input, (int) $user['user_id']));
         } elseif ($method === 'DELETE' && $id) {
             requirePermission($user, 'inventory.manage');
-            echo json_encode(ProductController::deleteStockItem($id));
+            echo json_encode(ProductController::deleteStockItem($id, (int) $user['user_id']));
         } else {
             http_response_code(400);
             echo json_encode(['error' => 'Bad request']);
         }
+        break;
+
+    case 'applications':
+        requirePermission($user, 'applications.review');
+        if ($method === 'GET') echo json_encode(ApplicationController::all());
+        elseif ($method === 'PUT' && $id) echo json_encode(ApplicationController::review($id, strtolower((string) ($input['status'] ?? '')), (int) $user['user_id']));
+        else { http_response_code(400); echo json_encode(['error' => 'Bad request']); }
         break;
 
     case 'report':
@@ -82,9 +98,6 @@ switch ($resource) {
         if ($method === 'GET') {
             requirePermission($user, 'reports.audit_logs.view');
             echo json_encode(AdminController::listAudit());
-        } elseif ($method === 'DELETE') {
-            requirePermission($user, 'reports.audit_logs.view');
-            echo json_encode(AdminController::clearAudit());
         } else {
             http_response_code(400);
             echo json_encode(['error' => 'Bad request']);

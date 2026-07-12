@@ -49,8 +49,9 @@ class ProductController
         ];
     }
 
-    public static function createStockItem(array $input): array
+    public static function createStockItem(array $input, int $actorId): array
     {
+        self::validateInput($input);
         $db = getDbConnection();
         $db->beginTransaction();
 
@@ -78,6 +79,7 @@ class ProductController
             ]);
 
             $db->commit();
+            self::logAudit($actorId, 'product.create', $productId, 'Created product: ' . $input['name']);
             return ['product_id' => $productId];
         } catch (Exception $e) {
             $db->rollBack();
@@ -86,11 +88,46 @@ class ProductController
         }
     }
 
-    public static function deleteStockItem(int $productId): array
+    public static function updateStockItem(int $productId, array $input, int $actorId): array
     {
+        self::validateInput($input);
+        $db = getDbConnection();
+        $db->beginTransaction();
+        $categoryId = self::findOrCreateCategory($input['category']);
+        $product = $db->prepare('UPDATE products SET product_name = :name, category_id = :category WHERE product_id = :id');
+        $product->execute(['name' => $input['name'], 'category' => $categoryId, 'id' => $productId]);
+        $variant = $db->prepare('UPDATE product_variants SET price = :price, stock_quantity = :stock WHERE product_id = :id');
+        $variant->execute(['price' => $input['price'], 'stock' => $input['stock'], 'id' => $productId]);
+        $db->commit();
+        self::logAudit($actorId, 'product.update', $productId, sprintf('Updated product: %s (PHP %.2f, stock %d)', $input['name'], $input['price'], $input['stock']));
+        return ['success' => true];
+    }
+
+    public static function deleteStockItem(int $productId, int $actorId): array
+    {
+        $lookup = getDbConnection()->prepare('SELECT product_name FROM products WHERE product_id = :id');
+        $lookup->execute(['id' => $productId]);
+        $name = $lookup->fetchColumn();
+        if (!$name) { http_response_code(404); return ['error' => 'Product not found']; }
         $stmt = getDbConnection()->prepare('DELETE FROM products WHERE product_id = :id');
         $stmt->execute(['id' => $productId]);
+        self::logAudit($actorId, 'product.delete', $productId, 'Deleted product: ' . $name);
         return ['success' => true];
+    }
+
+    private static function validateInput(array $input): void
+    {
+        if (trim((string) ($input['name'] ?? '')) === '' || trim((string) ($input['category'] ?? '')) === '' ||
+            !is_numeric($input['price'] ?? null) || (float) $input['price'] < 0 ||
+            filter_var($input['stock'] ?? null, FILTER_VALIDATE_INT) === false || (int) $input['stock'] < 0) {
+            throw new InvalidArgumentException('Valid product name, category, price, and stock are required');
+        }
+    }
+
+    private static function logAudit(int $actorId, string $action, int $recordId, string $details): void
+    {
+        $stmt = getDbConnection()->prepare('INSERT INTO audit_logs (user_id, action_name, table_name, record_id, details) VALUES (:user, :action, \'products\', :record, :details)');
+        $stmt->execute(['user' => $actorId, 'action' => $action, 'record' => $recordId, 'details' => $details]);
     }
 
     private static function findOrCreateCategory(string $categoryName): int
