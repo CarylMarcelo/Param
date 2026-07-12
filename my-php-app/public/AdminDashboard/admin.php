@@ -16,7 +16,7 @@ requirePermission($currentUser, 'users.manage');
 </head>
 <body>
     <header class="site-header">
-        <a class="brand" href="../index.php" aria-label="Param seller dashboard">
+        <a class="brand" href="admin.php" aria-label="Return to the Param seller dashboard">
             <img src="../images/logo-header.png" alt="Param logo">
         </a>
 
