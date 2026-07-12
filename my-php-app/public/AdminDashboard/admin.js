@@ -1,8 +1,16 @@
 (function () {
+    var API = '../api.php';
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
     var notice = document.getElementById('notice');
     var adminNameInput = document.getElementById('admin_name');
     var userList = document.getElementById('userList');
+    var newUserRoleSelect = document.getElementById('newUserRole');
+    var stockList = document.getElementById('stockList');
+    var reportBody = document.getElementById('reportBody');
     var auditLog = document.getElementById('auditLog');
+
+    var roles = []; // cached from GET ?resource=roles
 
     function safeText(value) {
         return String(value)
@@ -16,51 +24,65 @@
     function showNotice(message) {
         notice.textContent = message;
         notice.hidden = false;
-
         window.clearTimeout(showNotice.timer);
         showNotice.timer = window.setTimeout(function () {
             notice.hidden = true;
         }, 2500);
     }
 
-    function currentAdmin() {
-        return adminNameInput.value.trim() || 'System Admin';
+    function titleCase(value) {
+        value = String(value || '');
+        return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
     }
 
-    function formatDateTime() {
-        var now = new Date();
-        var year = now.getFullYear();
-        var month = String(now.getMonth() + 1).padStart(2, '0');
-        var day = String(now.getDate()).padStart(2, '0');
-        var hours = String(now.getHours()).padStart(2, '0');
-        var minutes = String(now.getMinutes()).padStart(2, '0');
-        var seconds = String(now.getSeconds()).padStart(2, '0');
-        return month + '/' + day + '/' + year + ', ' + hours + ':' + minutes + ':' + seconds;
+    // ---- generic API helper -------------------------------------------------
+    function api(resource, options) {
+        options = options || {};
+        var url = API + '?resource=' + encodeURIComponent(resource) +
+            (options.id ? '&id=' + encodeURIComponent(options.id) : '');
+
+        var fetchOptions = {
+            method: options.method || 'GET',
+            headers: { 'X-CSRF-Token': csrfToken }
+        };
+        if (options.body) {
+            fetchOptions.headers['Content-Type'] = 'application/json';
+            fetchOptions.body = JSON.stringify(options.body);
+        }
+
+        return fetch(url, fetchOptions).then(function (res) {
+            if (res.status === 401) {
+                window.location = '../login.php';
+                return Promise.reject('Not authenticated');
+            }
+            return res.json().then(function (data) {
+                if (!res.ok) {
+                    return Promise.reject(data.error || 'Request failed');
+                }
+                return data;
+            });
+        });
     }
 
-    function addAudit(activity) {
-        var row = document.createElement('tr');
-        var dateCell = document.createElement('td');
-        var adminCell = document.createElement('td');
-        var activityCell = document.createElement('td');
-
-        dateCell.textContent = formatDateTime();
-        adminCell.textContent = currentAdmin();
-        activityCell.textContent = activity;
-
-        row.appendChild(dateCell);
-        row.appendChild(adminCell);
-        row.appendChild(activityCell);
-        auditLog.insertBefore(row, auditLog.firstChild);
+    // ---- dashboard summary ---------------------------------------------------
+    function loadSummary() {
+        api('summary').then(function (data) {
+            document.getElementById('totalProducts').textContent = data.total_products;
+            document.getElementById('totalStock').textContent = data.total_stock;
+            document.getElementById('lowStock').textContent = data.low_stock;
+            document.getElementById('inventoryValue').textContent = 'PHP ' + Number(data.inventory_value).toFixed(2);
+        }).catch(function () { /* dashboard summary is non-critical */ });
     }
 
-    function roleOptions(selectedRole) {
-        return ['Super Admin', 'Inventory Manager', 'Reports Viewer'].map(function (role) {
-            return '<option' + (role === selectedRole ? ' selected' : '') + '>' + role + '</option>';
+    // ---- admin users -----------------------------------------------------
+    function roleOptionsHtml(selectedRoleName) {
+        return roles.map(function (role) {
+            var selected = role.role_name === selectedRoleName ? ' selected' : '';
+            return '<option' + selected + '>' + safeText(role.role_name) + '</option>';
         }).join('');
     }
 
-    function statusOptions(selectedStatus) {
+    function statusOptionsHtml(selectedStatus) {
         return ['Active', 'Inactive'].map(function (status) {
             return '<option' + (status === selectedStatus ? ' selected' : '') + '>' + status + '</option>';
         }).join('');
@@ -69,118 +91,212 @@
     function makeUserRow(user) {
         var row = document.createElement('form');
         row.className = 'edit-row user-row';
+        row.dataset.userId = user.user_id;
+        var fullName = (user.first_name + ' ' + user.last_name).trim();
         row.innerHTML =
-            '<label><span>Name</span><input name="name" value="' + safeText(user.name) + '" required></label>' +
+            '<label><span>Name</span><input name="name" value="' + safeText(fullName) + '" required></label>' +
             '<label><span>Email</span><input type="email" name="email" value="' + safeText(user.email) + '" required></label>' +
-            '<label><span>Role</span><select name="role">' + roleOptions(user.role) + '</select></label>' +
-            '<label><span>Status</span><select name="status">' + statusOptions(user.status) + '</select></label>' +
+            '<label><span>Role</span><select name="role">' + roleOptionsHtml(user.role_name) + '</select></label>' +
+            '<label><span>Status</span><select name="status">' + statusOptionsHtml(titleCase(user.status)) + '</select></label>' +
             '<div class="row-actions"><button type="submit" class="ghost-button">Update</button><button type="button" class="danger-button delete-user">Delete</button></div>';
         return row;
     }
 
+    function loadRoles() {
+        return api('roles').then(function (data) {
+            roles = data;
+            if (newUserRoleSelect) {
+                newUserRoleSelect.innerHTML = roleOptionsHtml(null);
+            }
+        });
+    }
+
+    function loadUsers() {
+        api('users').then(function (users) {
+            userList.querySelectorAll('.user-row').forEach(function (row) { row.remove(); });
+            users.forEach(function (user) {
+                userList.appendChild(makeUserRow(user));
+            });
+        }).catch(function (err) { showNotice('Could not load users: ' + err); });
+    }
+
     document.getElementById('adminForm').addEventListener('submit', function (event) {
         event.preventDefault();
-        addAudit('Changed admin display name');
         showNotice('Admin name updated.');
     });
 
     document.getElementById('addUserForm').addEventListener('submit', function (event) {
         event.preventDefault();
-
         var form = event.currentTarget;
-        var user = {
+        var payload = {
             name: form.elements.name.value.trim(),
             email: form.elements.email.value.trim(),
             role: form.elements.role.value,
             status: form.elements.status.value
         };
 
-        if (!user.name || !user.email) {
+        if (!payload.name || !payload.email) {
             showNotice('Please complete the admin user fields.');
             return;
         }
 
-        userList.appendChild(makeUserRow(user));
-        addAudit('Added admin user: ' + user.name);
-        showNotice('Admin user added.');
-        form.reset();
+        api('users', { method: 'POST', body: payload }).then(function () {
+            showNotice('Admin user added.');
+            form.reset();
+            loadUsers();
+            loadAudit();
+        }).catch(function (err) { showNotice('Could not add user: ' + err); });
     });
 
     userList.addEventListener('submit', function (event) {
-        if (!event.target.classList.contains('user-row')) {
-            return;
-        }
-
+        if (!event.target.classList.contains('user-row')) return;
         event.preventDefault();
-        addAudit('Updated admin user: ' + event.target.elements.name.value.trim());
-        showNotice('Admin user updated.');
+
+        var row = event.target;
+        var payload = {
+            name: row.elements.name.value.trim(),
+            email: row.elements.email.value.trim(),
+            role: row.elements.role.value,
+            status: row.elements.status.value
+        };
+
+        api('users', { method: 'PUT', id: row.dataset.userId, body: payload }).then(function () {
+            showNotice('Admin user updated.');
+            loadAudit();
+        }).catch(function (err) { showNotice('Could not update user: ' + err); });
     });
 
     userList.addEventListener('click', function (event) {
-        if (!event.target.classList.contains('delete-user')) {
-            return;
-        }
+        if (!event.target.classList.contains('delete-user')) return;
 
         var row = event.target.closest('.user-row');
-        var name = row.elements.name.value.trim() || 'Admin user';
-
-        row.remove();
-        addAudit('Deleted admin user: ' + name);
-        showNotice('Admin user deleted.');
+        api('users', { method: 'DELETE', id: row.dataset.userId }).then(function () {
+            row.remove();
+            showNotice('Admin user deleted.');
+            loadAudit();
+        }).catch(function (err) { showNotice('Could not delete user: ' + err); });
     });
 
-    document.getElementById('clearAuditLog').addEventListener('click', function () {
-        while (auditLog.firstChild) {
-            auditLog.removeChild(auditLog.firstChild);
-        }
-        addAudit('Audit log cleared');
-        showNotice('Audit log cleared.');
-    });
+    // ---- stocks ------------------------------------------------------------
+    function makeStockRow(item) {
+        var row = document.createElement('div');
+        row.className = 'edit-row';
+        row.dataset.productId = item.product_id;
+        row.innerHTML =
+            '<span>' + safeText(item.product_name) + '</span>' +
+            '<span>' + safeText(item.category_name) + '</span>' +
+            '<span>PHP ' + Number(item.price).toFixed(2) + '</span>' +
+            '<span>' + item.stock_quantity + '</span>' +
+            '<div class="row-actions"><button type="button" class="danger-button delete-stock">Delete</button></div>';
+        return row;
+    }
 
-    // btw, here is where i coded show/hide sections when clicking nav
+    function loadStock() {
+        api('stock').then(function (items) {
+            stockList.innerHTML = '';
+            items.forEach(function (item) { stockList.appendChild(makeStockRow(item)); });
+        }).catch(function (err) { showNotice('Could not load stock: ' + err); });
+    }
+
+    var addStockForm = document.getElementById('addStockForm');
+    if (addStockForm) {
+        addStockForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var form = event.currentTarget;
+            var payload = {
+                name: form.elements.name.value.trim(),
+                category: form.elements.category.value,
+                price: parseFloat(form.elements.price.value),
+                stock: parseInt(form.elements.stock.value, 10)
+            };
+
+            api('stock', { method: 'POST', body: payload }).then(function () {
+                showNotice('Stock item added.');
+                form.reset();
+                loadStock();
+                loadReport();
+                loadSummary();
+                loadAudit();
+            }).catch(function (err) { showNotice('Could not add stock item: ' + err); });
+        });
+    }
+
+    if (stockList) {
+        stockList.addEventListener('click', function (event) {
+            if (!event.target.classList.contains('delete-stock')) return;
+            var row = event.target.closest('[data-product-id]');
+            api('stock', { method: 'DELETE', id: row.dataset.productId }).then(function () {
+                row.remove();
+                showNotice('Stock item deleted.');
+                loadReport();
+                loadSummary();
+                loadAudit();
+            }).catch(function (err) { showNotice('Could not delete stock item: ' + err); });
+        });
+    }
+
+    // ---- reports -------------------------------------------------------------
+    function loadReport() {
+        if (!reportBody) return;
+        api('report').then(function (rows) {
+            reportBody.innerHTML = rows.map(function (r) {
+                return '<tr><td>' + safeText(r.product_name) + '</td><td>' + safeText(r.category_name) +
+                    '</td><td>' + r.stock_quantity + '</td><td>PHP ' + Number(r.price).toFixed(2) +
+                    '</td><td>PHP ' + Number(r.total_value).toFixed(2) + '</td></tr>';
+            }).join('');
+        }).catch(function (err) { showNotice('Could not load report: ' + err); });
+    }
+
+    // ---- audit log -------------------------------------------------------------
+    function loadAudit() {
+        if (!auditLog) return;
+        api('audit').then(function (rows) {
+            auditLog.innerHTML = rows.map(function (r) {
+                return '<tr><td>' + safeText(r.created_at) + '</td><td>' + safeText(r.actor) +
+                    '</td><td>' + safeText(r.details || r.action_name) + '</td></tr>';
+            }).join('');
+        }).catch(function (err) { showNotice('Could not load audit log: ' + err); });
+    }
+
+    var clearAuditBtn = document.getElementById('clearAuditLog');
+    if (clearAuditBtn) {
+        clearAuditBtn.addEventListener('click', function () {
+            api('audit', { method: 'DELETE' }).then(function () {
+                showNotice('Audit log cleared.');
+                loadAudit();
+            }).catch(function (err) { showNotice('Could not clear audit log: ' + err); });
+        });
+    }
+
+    // ---- section nav (unchanged) ------------------------------------------
     function showSection(id) {
         var allSections = document.querySelectorAll('.page-section');
-        
-        // for loop hide all sections f
         for (var i = 0; i < allSections.length; i++) {
             allSections[i].classList.remove('active');
         }
-        
-        // show selected section
         var targetSection = document.getElementById(id);
-        if (targetSection) {
-            targetSection.classList.add('active');
+        if (targetSection) targetSection.classList.add('active');
+    }
+
+    var sideNavLinks = document.querySelectorAll('.side-nav a');
+    var topNavLinks = document.querySelectorAll('.top-nav a');
+
+    function navHandler(e) {
+        var link = this.getAttribute('href');
+        if (link && link.charAt(0) === '#') {
+            e.preventDefault();
+            showSection(link.substring(1));
         }
     }
 
-    // setup nav click handlers
-    var sideNavLinks = document.querySelectorAll('.side-nav a');
-    var topNavLinks = document.querySelectorAll('.top-nav a');
-    
-    // side nav links
-    for (var k = 0; k < sideNavLinks.length; k++) {
-        sideNavLinks[k].addEventListener('click', function (e) {
-            var link = this.getAttribute('href');
-            if (link && link.charAt(0) === '#') {
-                e.preventDefault();
-                var sectionName = link.substring(1);
-                showSection(sectionName);
-            }
-        });
-    }
-    
-    //for da top nav links
-    for (var m = 0; m < topNavLinks.length; m++) {
-        topNavLinks[m].addEventListener('click', function (e) {
-            var link = this.getAttribute('href');
-            if (link && link.charAt(0) === '#') {
-                e.preventDefault();
-                var sectionName = link.substring(1);
-                showSection(sectionName);
-            }
-        });
-    }
+    for (var k = 0; k < sideNavLinks.length; k++) sideNavLinks[k].addEventListener('click', navHandler);
+    for (var m = 0; m < topNavLinks.length; m++) topNavLinks[m].addEventListener('click', navHandler);
 
-    // load dashboard when page opens
+    // ---- initial load ------------------------------------------------------
     showSection('dashboard');
+    loadSummary();
+    loadRoles().then(loadUsers);
+    loadStock();
+    loadReport();
+    loadAudit();
 }());

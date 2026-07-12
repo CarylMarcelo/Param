@@ -1,8 +1,16 @@
+<?php
+require_once __DIR__ . '/../../src/middleware/authentication.php';
+require_once __DIR__ . '/../../src/middleware/rbacmiddleware.php';
+$currentUser = requireLoginOrRedirect('../login.php');
+$csrfToken = csrfToken();
+requirePermission($currentUser, 'users.manage');
+?>
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
     <title>Param Seller Part</title>
     <link rel="stylesheet" href="admin.css">
 </head>
@@ -29,7 +37,7 @@
             <form class="admin-form" id="adminForm">
                 <label for="admin_name">Currently logged in</label>
                 <div class="inline-fields">
-                    <input id="admin_name" name="admin_name" value="System Admin" required>
+                    <input id="admin_name" name="admin_name" value="<?= htmlspecialchars($currentUser['first_name'] . ' ' . $currentUser['last_name']) ?>" required>
                     <button type="submit">Change Admin Name</button>
                 </div>
             </form>
@@ -55,19 +63,19 @@
                 <div class="summary-grid">
                     <article class="summary-card">
                         <span>Total Products</span>
-                        <strong id="totalProducts">4</strong>
+                        <strong id="totalProducts">-</strong>
                     </article>
                     <article class="summary-card">
                         <span>Items in Stock</span>
-                        <strong id="totalStock">73</strong>
+                        <strong id="totalStock">-</strong>
                     </article>
                     <article class="summary-card warning">
                         <span>Low Stock</span>
-                        <strong id="lowStock">1</strong>
+                        <strong id="lowStock">-</strong>
                     </article>
                     <article class="summary-card">
                         <span>Inventory Value</span>
-                        <strong>PHP 0.00</strong>
+                        <strong id="inventoryValue">PHP 0.00</strong>
                     </article>
                 </div>
             </section>
@@ -90,10 +98,8 @@
                         </label>
                         <label>
                             Admin role
-                            <select name="role">
-                                <option>Super Admin</option>
-                                <option>Inventory Manager</option>
-                                <option>Reports Viewer</option>
+                            <select name="role" id="newUserRole">
+                                <!-- options are rendered by admin.js from GET /api.php?resource=roles -->
                             </select>
                         </label>
                         <label>
@@ -116,65 +122,7 @@
                         <span>Action</span>
                     </div>
 
-                    <form class="edit-row user-row">
-                        <label>
-                            <span>Name</span>
-                            <input name="name" value="Param Main Admin" required>
-                        </label>
-                        <label>
-                            <span>Email</span>
-                            <input type="email" name="email" value="admin@param.local" required>
-                        </label>
-                        <label>
-                            <span>Role</span>
-                            <select name="role">
-                                <option selected>Super Admin</option>
-                                <option>Inventory Manager</option>
-                                <option>Reports Viewer</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span>Status</span>
-                            <select name="status">
-                                <option selected>Active</option>
-                                <option>Inactive</option>
-                            </select>
-                        </label>
-                        <div class="row-actions">
-                            <button type="submit" class="ghost-button">Update</button>
-                            <button type="button" class="danger-button delete-user">Delete</button>
-                        </div>
-                    </form>
-
-                    <form class="edit-row user-row">
-                        <label>
-                            <span>Name</span>
-                            <input name="name" value="Inventory Staff" required>
-                        </label>
-                        <label>
-                            <span>Email</span>
-                            <input type="email" name="email" value="inventory@param.local" required>
-                        </label>
-                        <label>
-                            <span>Role</span>
-                            <select name="role">
-                                <option>Super Admin</option>
-                                <option selected>Inventory Manager</option>
-                                <option>Reports Viewer</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span>Status</span>
-                            <select name="status">
-                                <option selected>Active</option>
-                                <option>Inactive</option>
-                            </select>
-                        </label>
-                        <div class="row-actions">
-                            <button type="submit" class="ghost-button">Update</button>
-                            <button type="button" class="danger-button delete-user">Delete</button>
-                        </div>
-                    </form>
+                    <!-- rows are rendered by admin.js from GET /api.php?resource=users -->
                 </div>
             </section>
 
@@ -184,7 +132,7 @@
                     <h2>Add or Modify Stocks</h2>
                 </div>
 
-                <form class="form-panel">
+                <form class="form-panel" id="addStockForm">
                     <div class="form-grid">
                         <label>
                             Product name
@@ -208,7 +156,7 @@
                             <input type="number" name="stock" min="0" step="1" required>
                         </label>
                     </div>
-                    <button type="button">Add Stock Item</button>
+                    <button type="submit">Add Stock Item</button>
                 </form>
 
                 <div class="edit-list">
@@ -219,6 +167,7 @@
                         <span>Stock</span>
                         <span>Action</span>
                     </div>
+                    <div id="stockList"></div>
                 </div>
             </section>
 
@@ -239,7 +188,7 @@
                                 <th>Total Value</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="reportBody">
                         </tbody>
                     </table>
                 </div>
@@ -265,11 +214,7 @@
                             </tr>
                         </thead>
                         <tbody id="auditLog">
-                            <tr>
-                                <td>--</td>
-                                <td>System Admin</td>
-                                <td>Seller dashboard opened</td>
-                            </tr>
+                            <!-- rows are rendered by admin.js from GET /api.php?resource=audit -->
                         </tbody>
                     </table>
                 </div>
