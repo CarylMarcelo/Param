@@ -36,7 +36,13 @@ class AdminController
             'status'     => strtolower($input['status'] ?? 'active'),
         ]);
 
-        self::logAudit($actorId, 'user.create', 'users', $userId, 'Created via Admin Dashboard');
+        self::logAudit(
+            $actorId,
+            'user.create',
+            'users',
+            $userId,
+            sprintf('Created user: %s <%s> (%s)', trim(($input['name'] ?? '')), $input['email'] ?? '', $role['role_name'])
+        );
         return ['user_id' => $userId];
     }
 
@@ -59,7 +65,13 @@ class AdminController
             'status'     => strtolower($input['status'] ?? 'active'),
         ]);
 
-        self::logAudit($actorId, 'user.update', 'users', $userId, 'Updated via Admin Dashboard');
+        self::logAudit(
+            $actorId,
+            'user.update',
+            'users',
+            $userId,
+            sprintf('Updated user: %s <%s> (%s, %s)', trim(($input['name'] ?? '')), $input['email'] ?? '', $role['role_name'], strtolower($input['status'] ?? 'active'))
+        );
         return ['success' => true];
     }
 
@@ -69,8 +81,19 @@ class AdminController
             http_response_code(422);
             return ['error' => 'You cannot delete your own account'];
         }
+        $deletedUser = User::findById($userId);
+        if (!$deletedUser) {
+            http_response_code(404);
+            return ['error' => 'User not found'];
+        }
         User::delete($userId);
-        self::logAudit($actorId, 'user.delete', 'users', $userId, 'Deleted via Admin Dashboard');
+        self::logAudit(
+            $actorId,
+            'user.delete',
+            'users',
+            $userId,
+            sprintf('Deleted user: %s %s <%s>', $deletedUser['first_name'], $deletedUser['last_name'], $deletedUser['email'])
+        );
         return ['success' => true];
     }
 
