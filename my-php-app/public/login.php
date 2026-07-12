@@ -10,7 +10,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($user && $user['status'] === 'active' && User::verifyPassword($user, $password)) {
         loginUser($user);
-        header('Location: AdminDashboard/admin.php');
+        $destinations = [
+            'Administrator' => 'AdminDashboard/admin.php',
+            'Delivery' => 'DeliveryDashboard/delivery.php',
+        ];
+        header('Location: ' . ($destinations[$user['role_name']] ?? 'index.php'));
         exit;
     }
     $error = 'Invalid email or password.';
@@ -31,9 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <form method="post">
-        <h2>Param Admin Login</h2>
+        <h2>Param Login</h2>
         <?php if ($error): ?><p class="error"><?= htmlspecialchars($error) ?></p><?php endif; ?>
-        <input type="email" name="email" placeholder="Email" value="admin@param.test" required>
+        <input type="email" name="email" placeholder="Email" value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>" required>
         <input type="password" name="password" placeholder="Password" required>
         <button type="submit">Log in</button>
     </form>
