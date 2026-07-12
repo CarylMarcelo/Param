@@ -1,31 +1,41 @@
 <?php
+
 require_once __DIR__ . '/../config/database.php';
 
 class Permission
 {
-    // All permission_keys granted to a role (used by rbacmiddleware).
     public static function forRole(int $roleId): array
     {
-        $stmt = getDbConnection()->prepare(
-            'SELECT p.permission_key
-             FROM role_permissions rp
-             JOIN permissions p ON p.permission_id = rp.permission_id
-             WHERE rp.role_id = :role_id'
+        $statement = getDbConnection()->prepare(
+            'SELECT permissions.permission_key
+             FROM role_permissions
+             JOIN permissions
+               ON permissions.permission_id = role_permissions.permission_id
+             WHERE role_permissions.role_id = :role_id'
         );
-        $stmt->execute(['role_id' => $roleId]);
-        return array_column($stmt->fetchAll(), 'permission_key');
+        $statement->execute(['role_id' => $roleId]);
+
+        return array_column($statement->fetchAll(), 'permission_key');
     }
 
-    public static function roleHasPermission(int $roleId, string $permissionKey): bool
-    {
-        $stmt = getDbConnection()->prepare(
+    public static function roleHasPermission(
+        int $roleId,
+        string $permissionKey
+    ): bool {
+        $statement = getDbConnection()->prepare(
             'SELECT 1
-             FROM role_permissions rp
-             JOIN permissions p ON p.permission_id = rp.permission_id
-             WHERE rp.role_id = :role_id AND p.permission_key = :key
+             FROM role_permissions
+             JOIN permissions
+               ON permissions.permission_id = role_permissions.permission_id
+             WHERE role_permissions.role_id = :role_id
+               AND permissions.permission_key = :permission_key
              LIMIT 1'
         );
-        $stmt->execute(['role_id' => $roleId, 'key' => $permissionKey]);
-        return (bool) $stmt->fetchColumn();
+        $statement->execute([
+            'role_id' => $roleId,
+            'permission_key' => $permissionKey,
+        ]);
+
+        return (bool) $statement->fetchColumn();
     }
 }
