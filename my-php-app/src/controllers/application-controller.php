@@ -1,29 +1,174 @@
 <?php
+
 require_once __DIR__ . '/../config/database.php';
+
 class ApplicationController
 {
     public static function all(): array
     {
-        return getDbConnection()->query("SELECT sa.application_id, CONCAT_WS(' ', sa.first_name, sa.middle_name, sa.last_name, sa.suffix) complete_name, sa.email, sa.phone, r.role_name requested_role, sa.reason, sa.experience, sa.availability, sa.status, sa.created_at FROM staff_applications sa JOIN roles r ON r.role_id = sa.requested_role_id ORDER BY FIELD(sa.status, 'pending', 'approved', 'rejected'), sa.created_at DESC")->fetchAll();
+        $query = "SELECT
+                    applications.application_id,
+                    CONCAT_WS(
+                        ' ',
+                        applications.first_name,
+                        applications.middle_name,
+                        applications.last_name,
+                        applications.suffix
+                    ) AS complete_name,
+                    applications.email,
+                    applications.phone,
+                    roles.role_name AS requested_role,
+                    applications.reason,
+                    applications.experience,
+                    applications.availability,
+                    applications.status,
+                    applications.created_at
+                  FROM staff_applications applications
+                  JOIN roles ON roles.role_id = applications.requested_role_id
+                  ORDER BY
+                    FIELD(applications.status, 'pending', 'approved', 'rejected'),
+                    applications.created_at DESC";
+
+        return getDbConnection()->query($query)->fetchAll();
     }
-    public static function review(int $id, string $status, int $actorId): array
-    {
-        if (!in_array($status, ['approved', 'rejected'], true)) { http_response_code(422); return ['error' => 'Review status must be approved or rejected']; }
-        $db = getDbConnection();
-        $lookup = $db->prepare('SELECT email, status FROM staff_applications WHERE application_id = :id'); $lookup->execute(['id' => $id]); $application = $lookup->fetch();
-        if (!$application) { http_response_code(404); return ['error' => 'Application not found']; }
-        if ($application['status'] !== 'pending') { http_response_code(422); return ['error' => 'Application was already reviewed']; }
-        $createdUserId = null; $accountSetup = null;
-        if ($status === 'approved') {
-            $details = $db->prepare("SELECT CONCAT_WS(' ', first_name, middle_name, last_name, suffix) name, email, r.role_name role FROM staff_applications sa JOIN roles r ON r.role_id = sa.requested_role_id WHERE application_id = :id");
-            $details->execute(['id' => $id]); $applicant = $details->fetch();
-            $accountSetup = AdminController::createUser(['name' => $applicant['name'], 'email' => $applicant['email'], 'role' => $applicant['role'], 'status' => 'Active'], $actorId);
+
+    public static function review(
+        int $applicationId,
+        string $newStatus,
+        int $administratorId
+    ): array {
+        if (!in_array($newStatus, ['approved', 'rejected'], true)) {
+            http_response_code(422);
+            return ['error' => 'Review status must be approved or rejected'];
+        }
+
+        $database = getDbConnection();
+        $application = self::findApplication($database, $applicationId);
+
+        if (!$application) {
+            http_response_code(404);
+            return ['error' => 'Application not found'];
+        }
+
+        if ($application['status'] !== 'pending') {
+            http_response_code(422);
+            return ['error' => 'Application was already reviewed'];
+        }
+
+        $createdUserId = null;
+        $accountSetup = null;
+
+        if ($newStatus === 'approved') {
+            $applicant = self::getApplicantAccountDetails($database, $applicationId);
+            $accountSetup = AdminController::createUser([
+                'name' => $applicant['name'],
+                'email' => $applicant['email'],
+                'role' => $applicant['role'],
+                'status' => 'Active',
+            ], $administratorId);
             $createdUserId = $accountSetup['user_id'];
         }
-        $update = $db->prepare('UPDATE staff_applications SET status = :status, reviewed_by = :reviewer, reviewed_at = NOW(), created_user_id = :created_user WHERE application_id = :id');
-        $update->execute(['status' => $status, 'reviewer' => $actorId, 'created_user' => $createdUserId, 'id' => $id]);
-        $audit = $db->prepare("INSERT INTO audit_logs (user_id, action_name, table_name, record_id, details) VALUES (:user, 'application.review', 'staff_applications', :record, :details)");
-        $audit->execute(['user' => $actorId, 'record' => $id, 'details' => ucfirst($status) . ' staff application: ' . $application['email']]);
-        return ['success' => true, 'account_setup' => $accountSetup];
+
+        self::saveReview(
+            $database,
+            $applicationId,
+            $newStatus,
+            $administratorId,
+            $createdUserId
+        );
+        self::recordAudit(
+            $database,
+            $administratorId,
+            $applicationId,
+            $newStatus,
+            $application['email']
+        );
+
+        return [
+            'success' => true,
+            'account_setup' => $accountSetup,
+        ];
+    }
+
+    private static function findApplication(PDO $database, int $applicationId): array|false
+    {
+        $statement = $database->prepare(
+            'SELECT email, status
+             FROM staff_applications
+             WHERE application_id = :application_id'
+        );
+        $statement->execute(['application_id' => $applicationId]);
+
+        return $statement->fetch();
+    }
+
+    private static function getApplicantAccountDetails(
+        PDO $database,
+        int $applicationId
+    ): array {
+        $statement = $database->prepare(
+            "SELECT
+                CONCAT_WS(' ', first_name, middle_name, last_name, suffix) AS name,
+                email,
+                roles.role_name AS role
+             FROM staff_applications
+             JOIN roles ON roles.role_id = staff_applications.requested_role_id
+             WHERE application_id = :application_id"
+        );
+        $statement->execute(['application_id' => $applicationId]);
+
+        return $statement->fetch();
+    }
+
+    private static function saveReview(
+        PDO $database,
+        int $applicationId,
+        string $status,
+        int $administratorId,
+        ?int $createdUserId
+    ): void {
+        $statement = $database->prepare(
+            'UPDATE staff_applications
+             SET status = :status,
+                 reviewed_by = :administrator_id,
+                 reviewed_at = NOW(),
+                 created_user_id = :created_user_id
+             WHERE application_id = :application_id'
+        );
+        $statement->execute([
+            'status' => $status,
+            'administrator_id' => $administratorId,
+            'created_user_id' => $createdUserId,
+            'application_id' => $applicationId,
+        ]);
+    }
+
+    private static function recordAudit(
+        PDO $database,
+        int $administratorId,
+        int $applicationId,
+        string $status,
+        string $applicantEmail
+    ): void {
+        $statement = $database->prepare(
+            "INSERT INTO audit_logs (
+                user_id,
+                action_name,
+                table_name,
+                record_id,
+                details
+             ) VALUES (
+                :administrator_id,
+                'application.review',
+                'staff_applications',
+                :application_id,
+                :details
+             )"
+        );
+        $statement->execute([
+            'administrator_id' => $administratorId,
+            'application_id' => $applicationId,
+            'details' => ucfirst($status) . ' staff application: ' . $applicantEmail,
+        ]);
     }
 }
