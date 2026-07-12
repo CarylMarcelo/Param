@@ -39,7 +39,17 @@ class AdminController
 
         $plainToken = bin2hex(random_bytes(32));
         $tokenStatement = getDbConnection()->prepare(
-            "INSERT INTO auth_tokens (user_id, token_type, token_hash, expires_at) VALUES (:user_id, 'account_setup', :token_hash, DATE_ADD(NOW(), INTERVAL 24 HOUR))"
+            "INSERT INTO auth_tokens (
+                user_id,
+                token_type,
+                token_hash,
+                expires_at
+             ) VALUES (
+                :user_id,
+                'account_setup',
+                :token_hash,
+                DATE_ADD(NOW(), INTERVAL 24 HOUR)
+             )"
         );
         $tokenStatement->execute(['user_id' => $userId, 'token_hash' => hash('sha256', $plainToken)]);
         $setupUrl = self::accountSetupUrl($plainToken);
@@ -85,7 +95,13 @@ class AdminController
             'user.update',
             'users',
             $userId,
-            sprintf('Updated user: %s <%s> (%s, %s)', trim(($input['name'] ?? '')), $input['email'] ?? '', $role['role_name'], strtolower($input['status'] ?? 'active'))
+            sprintf(
+                'Updated user: %s <%s> (%s, %s)',
+                trim(($input['name'] ?? '')),
+                $input['email'] ?? '',
+                $role['role_name'],
+                strtolower($input['status'] ?? 'active')
+            )
         );
         return ['success' => true];
     }

@@ -85,7 +85,14 @@ switch ($resource) {
     case 'applications':
         requirePermission($user, 'applications.review');
         if ($method === 'GET') echo json_encode(ApplicationController::all());
-        elseif ($method === 'PUT' && $id) echo json_encode(ApplicationController::review($id, strtolower((string) ($input['status'] ?? '')), (int) $user['user_id']));
+        elseif ($method === 'PUT' && $id) {
+            $reviewStatus = strtolower((string) ($input['status'] ?? ''));
+            echo json_encode(ApplicationController::review(
+                $id,
+                $reviewStatus,
+                (int) $user['user_id']
+            ));
+        }
         else { http_response_code(400); echo json_encode(['error' => 'Bad request']); }
         break;
 

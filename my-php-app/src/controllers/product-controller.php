@@ -99,7 +99,13 @@ class ProductController
         $variant = $db->prepare('UPDATE product_variants SET price = :price, stock_quantity = :stock WHERE product_id = :id');
         $variant->execute(['price' => $input['price'], 'stock' => $input['stock'], 'id' => $productId]);
         $db->commit();
-        self::logAudit($actorId, 'product.update', $productId, sprintf('Updated product: %s (PHP %.2f, stock %d)', $input['name'], $input['price'], $input['stock']));
+        $auditDetails = sprintf(
+            'Updated product: %s (PHP %.2f, stock %d)',
+            $input['name'],
+            $input['price'],
+            $input['stock']
+        );
+        self::logAudit($actorId, 'product.update', $productId, $auditDetails);
         return ['success' => true];
     }
 
@@ -126,7 +132,21 @@ class ProductController
 
     private static function logAudit(int $actorId, string $action, int $recordId, string $details): void
     {
-        $stmt = getDbConnection()->prepare('INSERT INTO audit_logs (user_id, action_name, table_name, record_id, details) VALUES (:user, :action, \'products\', :record, :details)');
+        $stmt = getDbConnection()->prepare(
+            "INSERT INTO audit_logs (
+                user_id,
+                action_name,
+                table_name,
+                record_id,
+                details
+             ) VALUES (
+                :user,
+                :action,
+                'products',
+                :record,
+                :details
+             )"
+        );
         $stmt->execute(['user' => $actorId, 'action' => $action, 'record' => $recordId, 'details' => $details]);
     }
 
