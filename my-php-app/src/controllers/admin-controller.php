@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/user.php';
 require_once __DIR__ . '/../models/role.php';
+require_once __DIR__ . '/../services/email-service.php';
 
 // Backs the "Admin Users" and "Audit Log" sections of AdminDashboard.
 class AdminController
@@ -36,6 +37,20 @@ class AdminController
             'status'     => strtolower($input['status'] ?? 'active'),
         ]);
 
+        $plainToken = bin2hex(random_bytes(32));
+        $tokenStatement = getDbConnection()->prepare(
+            "INSERT INTO auth_tokens (user_id, token_type, token_hash, expires_at) VALUES (:user_id, 'account_setup', :token_hash, DATE_ADD(NOW(), INTERVAL 24 HOUR))"
+        );
+        $tokenStatement->execute(['user_id' => $userId, 'token_hash' => hash('sha256', $plainToken)]);
+        $setupUrl = self::accountSetupUrl($plainToken);
+        $emailSent = false; $emailError = null;
+        try {
+            $emailSent = EmailService::sendAccountSetup((string) ($input['email'] ?? ''), trim((string) ($input['name'] ?? '')), $setupUrl);
+            if (!$emailSent) $emailError = 'SMTP is not configured';
+        } catch (Throwable $exception) {
+            $emailError = $exception->getMessage();
+        }
+
         self::logAudit(
             $actorId,
             'user.create',
@@ -43,7 +58,7 @@ class AdminController
             $userId,
             sprintf('Created user: %s <%s> (%s)', trim(($input['name'] ?? '')), $input['email'] ?? '', $role['role_name'])
         );
-        return ['user_id' => $userId];
+        return ['user_id' => $userId, 'email_sent' => $emailSent, 'email_error' => $emailError, 'setup_url' => $emailSent ? null : $setupUrl];
     }
 
     public static function updateUser(int $userId, array $input, int $actorId): array
@@ -151,5 +166,13 @@ class AdminController
             http_response_code(422);
             throw new InvalidArgumentException('Invalid account status');
         }
+    }
+
+    private static function accountSetupUrl(string $token): string
+    {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $directory = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/public/api.php'));
+        return sprintf('%s://%s%s/setup-account.php?token=%s', $scheme, $host, $directory, urlencode($token));
     }
 }

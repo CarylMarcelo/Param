@@ -79,6 +79,12 @@ class User
         return $stmt->execute(['id' => $userId]);
     }
 
+    public static function setPassword(int $userId, string $password): bool
+    {
+        $stmt = getDbConnection()->prepare('UPDATE users SET password_hash = :hash, must_change_password = 0 WHERE user_id = :id');
+        return $stmt->execute(['hash' => password_hash($password, PASSWORD_DEFAULT), 'id' => $userId]);
+    }
+
     public static function verifyPassword(array $user, string $password): bool
     {
         return password_verify($password, $user['password_hash']);

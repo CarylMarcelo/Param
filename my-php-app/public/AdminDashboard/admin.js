@@ -21,13 +21,13 @@
             .replace(/'/g, '&#039;');
     }
 
-    function showNotice(message) {
+    function showNotice(message, persistent) {
         notice.textContent = message;
         notice.hidden = false;
         window.clearTimeout(showNotice.timer);
-        showNotice.timer = window.setTimeout(function () {
-            notice.hidden = true;
-        }, 2500);
+        if (!persistent) {
+            showNotice.timer = window.setTimeout(function () { notice.hidden = true; }, 2500);
+        }
     }
 
     function titleCase(value) {
@@ -140,8 +140,10 @@
             return;
         }
 
-        api('users', { method: 'POST', body: payload }).then(function () {
-            showNotice('Admin user added.');
+        api('users', { method: 'POST', body: payload }).then(function (result) {
+            var message = result.email_sent ? 'User added. Account setup email sent.' :
+                'User added, but email was not sent (' + result.email_error + '). Setup link: ' + result.setup_url;
+            showNotice(message, !result.email_sent);
             form.reset();
             loadUsers();
             loadAudit();
