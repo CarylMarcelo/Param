@@ -1,0 +1,125 @@
+body {
+    background: url('../images/Welcome.png') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #222222;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 50% 50%;
+    align-items: center;
+    justify-items: center;
+    justify-content: flex-end;
+    padding: 2rem 5vw;
+}
+
+.signup-card {
+    grid-column: 2; 
+    background-color:  #FFF0C4;
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    width: 100%;
+    max-width: 580px;
+    padding: 2.5rem;
+}
+
+.form-title {
+    color: #3E0703;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    text-align: center;
+}
+
+.section-label {
+    font-weight: 600;
+    color: #3E0703;
+    font-size: 1rem;
+    margin-top: 1.1rem;
+    margin-bottom: 0.4rem;
+    border-bottom: 2px solid #390000;
+    padding-bottom: 0.25rem;
+}
+
+.form-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #444444;
+    margin-bottom: 0.2rem;
+}
+
+.form-control, .form-select {
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.9rem;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #FCB53B;
+    box-shadow: 0 0 0 0.25rem rgba(252, 181, 59, 0.3);
+    outline: none;
+}
+
+.form-check-input:checked {
+    background-color: #3E0703;
+    border-color: #3E0703;
+}
+
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.25rem rgba(252, 181, 59, 0.3);
+    border-color: #FCB53B;
+}
+
+.btn-signup {
+    background-color: #3E0703;
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem;
+    width: 100%;
+    margin-top: 1.25rem;
+    transition: all 0.3s ease;
+}
+
+.btn-signup:hover {
+    background-color: #2a0402;
+    color: #FCB53B;
+}
+
+.terms-text {
+    font-size: 0.85rem;
+    color: #555555;
+}
+
+.terms-text a {
+    color: #3E0703;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.terms-text a:hover {
+    color: #FCB53B;
+}
+
+.login-link-container {
+    text-align: center;
+    margin-top: 1.25rem;
+    font-size: 0.9rem;
+    color: #555555;
+}
+
+.login-link-container a {
+    color: #3E0703;
+    font-weight: 700;
+    text-decoration: none;
+    margin-left: 0.25rem;
+}
+
+.login-link-container a:hover {
+    color: #FCB53B;
+    text-decoration: underline;
+}
