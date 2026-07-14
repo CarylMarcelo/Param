@@ -1,4 +1,23 @@
-<?php include __DIR__ . '/includes/header.php'; ?>
+<?php 
+$path = 'store/'; 
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PARAM | Designed for everyday life</title>
+    
+    <link rel="stylesheet" href="store/css/style.css">
+    <link rel="stylesheet" href="landing.css">
+
+</head>
+<body>
+
+    <?php 
+    // 3. Include the header
+    include 'store/includes/header.php'; 
+    ?>
 
     <main>
         <section class="hero" id="home">
@@ -8,7 +27,7 @@
                     <h1>Style that feels <span>like you.</span></h1>
                     <p>PARAM brings together comfortable fabrics, thoughtful details, and timeless silhouettes for women, men, and kids.</p>
                     <div class="hero-actions">
-                        <a class="button" href="Store/shop.php">Explore the Collection</a>
+                        <a class="button" href="store/shop.php">Explore the Collection</a>
                         <a class="button-outline" href="#featured">View Featured</a>
                     </div>
                 </div>
@@ -32,9 +51,9 @@
                 </div>
 
                 <div class="featured-grid">
-                    <a class="featured-card reveal" href="Store/shop.php" aria-label="Shop Kids Pocketable UV Protection Parka">
+                    <a class="featured-card reveal" href="store/shop.php" aria-label="Shop Kids Pocketable UV Protection Parka">
                         <div class="featured-image-wrap">
-                            <img src="Store/images/prod1.avif" alt="Kids Pocketable UV Protection Parka">
+                            <img src="store/images/prod1.avif" alt="Kids Pocketable UV Protection Parka">
                             <span class="featured-tag">Kids</span>
                         </div>
                         <div class="featured-details">
@@ -46,9 +65,9 @@
                         </div>
                     </a>
 
-                    <a class="featured-card reveal" href="Store/shop.php" aria-label="Shop Nylon Culotte">
+                    <a class="featured-card reveal" href="store/shop.php" aria-label="Shop Nylon Culotte">
                         <div class="featured-image-wrap">
-                            <img src="Store/images/prod2.avif" alt="Nylon Culotte">
+                            <img src="store/images/prod2.avif" alt="Nylon Culotte">
                             <span class="featured-tag">Women</span>
                         </div>
                         <div class="featured-details">
@@ -60,9 +79,9 @@
                         </div>
                     </a>
 
-                    <a class="featured-card reveal" href="Store/shop.php" aria-label="Shop Washed Cotton Boxy T-Shirt">
+                    <a class="featured-card reveal" href="store/shop.php" aria-label="Shop Washed Cotton Boxy T-Shirt">
                         <div class="featured-image-wrap">
-                            <img src="Store/images/prod3.avif" alt="Washed Cotton Boxy T-Shirt">
+                            <img src="store/images/prod3.avif" alt="Washed Cotton Boxy T-Shirt">
                             <span class="featured-tag">Unisex</span>
                         </div>
                         <div class="featured-details">
@@ -74,9 +93,9 @@
                         </div>
                     </a>
 
-                    <a class="featured-card reveal" href="Store/shop.php" aria-label="Shop Washable 3D Knit Polo">
+                    <a class="featured-card reveal" href="store/shop.php" aria-label="Shop Washable 3D Knit Polo">
                         <div class="featured-image-wrap">
-                            <img src="Store/images/prod4.avif" alt="Washable 3D Knit Polo">
+                            <img src="store/images/prod4.avif" alt="Washable 3D Knit Polo">
                             <span class="featured-tag">Men</span>
                         </div>
                         <div class="featured-details">
@@ -90,7 +109,7 @@
                 </div>
 
                 <div class="featured-action reveal">
-                    <a class="button-outline" href="Store/shop.php">Shop All Clothing</a>
+                    <a class="button-outline" href="store/shop.php">Shop All Clothing</a>
                 </div>
             </div>
         </section>
@@ -98,7 +117,7 @@
         <section class="section" id="about">
             <div class="container about-grid">
                 <div class="about-photo reveal">
-                    <img src="Store/images/AboutUsImage1.jpg" alt="A selection of PARAM clothing">
+                    <img src="store/images/AboutUsImage1.jpg" alt="A selection of PARAM clothing">
                 </div>
 
                 <div class="about-copy reveal">
@@ -174,9 +193,9 @@
                 </div>
 
                 <div class="value-collage reveal">
-                    <img src="Store/images/AboutUsImage4.jpg" alt="Close-up of PARAM fabric and tailoring">
-                    <img src="Store/images/prod3.avif" alt="PARAM everyday shirt">
-                    <img src="Store/images/prod2.avif" alt="PARAM versatile clothing">
+                    <img src="store/images/AboutUsImage4.jpg" alt="Close-up of PARAM fabric and tailoring">
+                    <img src="store/images/prod3.avif" alt="PARAM everyday shirt">
+                    <img src="store/images/prod2.avif" alt="PARAM versatile clothing">
                 </div>
             </div>
         </section>
@@ -187,9 +206,14 @@
                     <h2>Find the pieces that fit your life.</h2>
                     <p>Explore the latest PARAM collection and make everyday style your own.</p>
                 </div>
-                <a class="button" href="Store/shop.php">Start Shopping</a>
+                <a class="button" href="store/shop.php">Start Shopping</a>
             </div>
         </section>
     </main>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php 
+$path = 'store/'; 
+include 'store/includes/footer.php'; 
+?>
+
+<script src="landing.js"></script>

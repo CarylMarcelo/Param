@@ -1,18 +1,21 @@
 const menuButton = document.querySelector('.menu-button');
 const navigation = document.querySelector('.nav-links');
 
-menuButton.addEventListener('click', function () {
-    const isOpen = navigation.classList.toggle('open');
-    menuButton.setAttribute('aria-expanded', isOpen);
-});
-
-navigation.querySelectorAll('a').forEach(function (link) {
-    link.addEventListener('click', function () {
-        navigation.classList.remove('open');
-        menuButton.setAttribute('aria-expanded', 'false');
+if (menuButton && navigation) {
+    menuButton.addEventListener('click', function () {
+        const isOpen = navigation.classList.toggle('open');
+        menuButton.setAttribute('aria-expanded', isOpen);
     });
-});
 
+    navigation.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () {
+            navigation.classList.remove('open');
+            menuButton.setAttribute('aria-expanded', 'false');
+        });
+    });
+}
+
+// 2. The reveal animation will now successfully run!
 const revealItems = document.querySelectorAll('.reveal');
 
 if ('IntersectionObserver' in window) {

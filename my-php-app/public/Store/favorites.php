@@ -1,3 +1,30 @@
+<?php
+session_start();
+require_once 'includes/db.php';
+
+// --- TEMPORARY BYPASS FOR TESTING ---
+// Act as the dummy Customer (ID: 999)
+$_SESSION['user_id'] = 999;
+
+/* Commented out until the login system is ready
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit;
+}
+*/
+
+$stmt = $pdo->prepare("
+    SELECT p.product_id, p.product_name, p.image_path, MIN(v.price) as display_price 
+    FROM products p
+    JOIN favorites f ON p.product_id = f.product_id
+    JOIN product_variants v ON p.product_id = v.product_id
+    WHERE f.user_id = :user_id
+    GROUP BY p.product_id
+");
+$stmt->execute(['user_id' => $_SESSION['user_id']]);
+$favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -12,66 +39,42 @@
 <body>
 
     <main class="store-container">
-        <?php include 'includes/header.php'; ?>
+        <?php
+        $path = '';
+        include 'includes/header.php';
+        ?>
 
+       <section class="product-section">
+                <h2 class="section-title">Your Favorites</h2>
 
-        <section class="product-section">
-            <h2 class="section-title">Your Favorites</h2>
+                <div class="product-grid">
+                    <?php if (empty($favorites)): ?>
+                        <p>You haven't added any favorites yet.</p>
+                    <?php else: ?>
+                        <?php foreach ($favorites as $item): ?>
+                            <div class="product-card">
+                                <img src="<?php echo htmlspecialchars($item['image_path']); ?>"
+                                    alt="<?php echo htmlspecialchars($item['product_name']); ?>" class="product-image">
+                                <div class="product-info">
+                                    <h3 class="product-title"><?php echo htmlspecialchars($item['product_name']); ?></h3>
+                                    <p class="product-price">₱<?php echo number_format($item['display_price'], 2); ?></p>
+                                    <div class="favorite-actions">
+                                        <button class="btn-cart" data-id="<?php echo $item['product_id']; ?>">Add to
+                                            Cart</button>
 
-            <div class="product-grid">
-
-                <div class="product-card">
-                    <img src="images/prod10.avif" alt="Ribbed Henley Neck T-Shirt" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Ribbed Henley Neck T-Shirt | Long Sleeve</h3>
-                        <p class="product-price">₱990.00</p>
-                        <div class="favorite-actions">
-                            <button class="btn-cart">Add to Cart</button>
-                            <button class="btn-remove">Remove</button>
-                        </div>
-                    </div>
+                                        <a href="removeFavorites.php?id=<?php echo $item['product_id']; ?>"
+                                            class="btn-remove">Remove</a>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
-
-                <div class="product-card">
-                    <img src="images/prod19.avif" alt="Cargo Shorts" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Cargo Shorts</h3>
-                        <p class="product-price">₱1,290.00</p>
-                        <div class="favorite-actions">
-                            <button class="btn-cart">Add to Cart</button>
-                            <button class="btn-remove">Remove</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <img src="images/prod14.avif" alt="Ultra Stretch Active Shorts" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Ultra Stretch Active Shorts</h3>
-                        <p class="product-price">₱1,490.00</p>
-                        <div class="favorite-actions">
-                            <button class="btn-cart">Add to Cart</button>
-                            <button class="btn-remove">Remove</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <img src="images/prod20.avif" alt="Tank Top" class="product-image">
-                    <div class="product-info">
-                        <h3 class="product-title">Tank Top</h3>
-                        <p class="product-price">₱790.00</p>
-                        <div class="favorite-actions">
-                            <button class="btn-cart">Add to Cart</button>
-                            <button class="btn-remove">Remove</button>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </section>
+            </section>
 
     </main>
 
-
-    <?php include 'includes/footer.php'; ?>
+<?php 
+$path = ''; 
+include 'includes/footer.php'; 
+?>

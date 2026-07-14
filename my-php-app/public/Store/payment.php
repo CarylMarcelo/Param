@@ -13,7 +13,10 @@
 <body>
 
     <main class="store-container">
-        <?php include 'includes/header.php'; ?>
+        <?php 
+        $path = ''; 
+        include 'includes/header.php'; 
+        ?>
 
         <section class="payment-section">
             <div class="success-card">
@@ -57,5 +60,7 @@
 
     </main>
 
-
-    <?php include 'includes/footer.php'; ?>
+<?php 
+$path = ''; 
+include 'includes/footer.php'; 
+?>

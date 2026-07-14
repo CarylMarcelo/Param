@@ -13,8 +13,10 @@
 <body>
 
     <main class="store-container">
-        <?php include 'includes/header.php'; ?>
-
+        <?php 
+        $path = ''; 
+        include 'includes/header.php'; 
+        ?>
 
         <section class="checkout-section">
             <h2 class="section-title">Checkout</h2>
@@ -133,5 +135,7 @@
 
     </main>
 
-
-    <?php include 'includes/footer.php'; ?>
+<?php 
+$path = ''; 
+include 'includes/footer.php'; 
+?>

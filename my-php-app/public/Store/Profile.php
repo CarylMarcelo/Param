@@ -19,7 +19,10 @@ $profilePic = $_SESSION['user_avatar']   ?? '';
 </head>
 <body>
 
-  <?php include 'includes/header.php'; ?>
+  <?php 
+  $path = ''; 
+  include 'includes/header.php'; 
+  ?>
 
 <div class="profile-card">
 
@@ -127,4 +130,7 @@ $profilePic = $_SESSION['user_avatar']   ?? '';
   }
 </script>
 
-  <?php include 'includes/footer.php'; ?>
+<?php 
+$path = ''; 
+include 'includes/footer.php'; 
+?>
