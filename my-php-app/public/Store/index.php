@@ -1,3 +1,18 @@
+<?php
+require_once 'includes/db.php';
+
+$query = "SELECT p.product_id, p.product_name, p.image_path, MIN(v.price) as display_price 
+          FROM products p
+          LEFT JOIN product_variants v ON p.product_id = v.product_id
+          WHERE p.product_id IN (1, 2, 3, 4)
+          GROUP BY p.product_id
+          ORDER BY FIELD(p.product_id, 1, 2, 3, 4)";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+$top_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
