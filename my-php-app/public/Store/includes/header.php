@@ -4,7 +4,7 @@
     </div>
     <nav class="nav-links">
         <a href="../landing.php" title="Back to PARAM landing page">&larr; Main Site</a>
-        <a href="index.php" <?php if(basename($_SERVER['PHP_SELF']) == 'index.php') echo 'class="active-link"'; ?>>Featured</a>
+        <a href="../landing.php#featured">Featured</a>
         <a href="shop.php" <?php if(basename($_SERVER['PHP_SELF']) == 'shop.php') echo 'class="active-link"'; ?>>Shop</a>
         <a href="AboutUs.php" <?php if(basename($_SERVER['PHP_SELF']) == 'AboutUs.php') echo 'class="active-link"'; ?>>About Us</a>
         <a href="ContactUs.php" <?php if(basename($_SERVER['PHP_SELF']) == 'ContactUs.php') echo 'class="active-link"'; ?>>Contact Us</a>

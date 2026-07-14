@@ -36,7 +36,7 @@
                     <p>PARAM brings together comfortable fabrics, thoughtful details, and timeless silhouettes for women, men, and kids.</p>
                     <div class="hero-actions">
                         <a class="button" href="Store/shop.php">Explore the Collection</a>
-                        <a class="button-outline" href="Store/index.php">View Featured</a>
+                        <a class="button-outline" href="#featured">View Featured</a>
                     </div>
                 </div>
 
@@ -46,6 +46,78 @@
                         <strong>2025 / 2026</strong>
                         <span>Everyday essentials with a confident point of view.</span>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section featured-section" id="featured">
+            <div class="container">
+                <div class="section-heading center reveal">
+                    <span class="eyebrow">Featured clothing</span>
+                    <h2>Everyday favorites, chosen for you.</h2>
+                    <p>Start with the PARAM pieces our customers reach for most.</p>
+                </div>
+
+                <div class="featured-grid">
+                    <a class="featured-card reveal" href="Store/shop.php" aria-label="Shop Kids Pocketable UV Protection Parka">
+                        <div class="featured-image-wrap">
+                            <img src="Store/images/prod1.avif" alt="Kids Pocketable UV Protection Parka">
+                            <span class="featured-tag">Kids</span>
+                        </div>
+                        <div class="featured-details">
+                            <h3>Kids Pocketable UV Protection Parka</h3>
+                            <div class="featured-meta">
+                                <span>Outerwear</span>
+                                <strong>&#8369;1,490.00</strong>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a class="featured-card reveal" href="Store/shop.php" aria-label="Shop Nylon Culotte">
+                        <div class="featured-image-wrap">
+                            <img src="Store/images/prod2.avif" alt="Nylon Culotte">
+                            <span class="featured-tag">Women</span>
+                        </div>
+                        <div class="featured-details">
+                            <h3>Nylon Culotte</h3>
+                            <div class="featured-meta">
+                                <span>Bottoms</span>
+                                <strong>&#8369;1,990.00</strong>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a class="featured-card reveal" href="Store/shop.php" aria-label="Shop Washed Cotton Boxy T-Shirt">
+                        <div class="featured-image-wrap">
+                            <img src="Store/images/prod3.avif" alt="Washed Cotton Boxy T-Shirt">
+                            <span class="featured-tag">Unisex</span>
+                        </div>
+                        <div class="featured-details">
+                            <h3>Washed Cotton Boxy T-Shirt</h3>
+                            <div class="featured-meta">
+                                <span>Tops</span>
+                                <strong>&#8369;590.00</strong>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a class="featured-card reveal" href="Store/shop.php" aria-label="Shop Washable 3D Knit Polo">
+                        <div class="featured-image-wrap">
+                            <img src="Store/images/prod4.avif" alt="Washable 3D Knit Polo">
+                            <span class="featured-tag">Men</span>
+                        </div>
+                        <div class="featured-details">
+                            <h3>Washable 3D Knit Polo</h3>
+                            <div class="featured-meta">
+                                <span>Knitwear</span>
+                                <strong>&#8369;2,490.00</strong>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="featured-action reveal">
+                    <a class="button-outline" href="Store/shop.php">Shop All Clothing</a>
                 </div>
             </div>
         </section>
@@ -157,7 +229,7 @@
 
                 <div class="footer-column">
                     <h3>Explore</h3>
-                    <a href="Store/index.php">Featured</a>
+                    <a href="#featured">Featured</a>
                     <a href="Store/shop.php">Shop</a>
                     <a href="Store/AboutUs.php">About Us</a>
                     <a href="Store/ContactUs.php">Contact Us</a>
