@@ -62,8 +62,8 @@
         <div class="section-label">Email Address</div>
         <div class="row g-2">
             <div class="col-12">
-                <label for="contact_number" class="form-label">Email</label>
-                <input type="tel" class="form-control" id="contact_number" name="contact_number" placeholder="e.g., juan.delacruz@example.com" required>
+                <label for="email_address" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email_address" name="email_address" placeholder="e.g., juan.delacruz@example.com" required>
             </div>
         </div>
 
@@ -71,7 +71,7 @@
         <div class="row g-2">
             <div class="col-12">
                 <label for="contact_number" class="form-label">Mobile / Phone Number</label>
-                <input type="tel" class="form-control" id="contact_number" name="contact_number" required>
+                <input type="tel" class="form-control" id="contact_number" name="contact_number" placeholder="e.g., 09123456789" required>
             </div>
         </div>
 
