@@ -1,45 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PARAM creates comfortable, timeless clothing for women, men, and kids.">
-    <title>PARAM | Everyday Style, Made Better</title>
-    <link rel="stylesheet" href="landing.css">
-</head>
-<body>
-    <header class="site-header">
-        <div class="navbar">
-            <div class="logo">
-                <a href="landing.php" aria-label="PARAM homepage">
-                    <img src="Store/images/logo-header.png" alt="PARAM" class="img-logo">
-                </a>
-            </div>
-
-            <nav class="nav-links" aria-label="Main navigation">
-                <a href="Store/shop.php">Shop</a>
-                <a href="Store/AboutUs.php">About Us</a>
-                <a href="Store/ContactUs.php">Contact Us</a>
-            </nav>
-
-            <div class="nav-icons">
-                <a href="Store/shop.php" title="Browse products" aria-label="Browse products">
-                    <img src="Store/images/search.png" alt="" class="custom-icon">
-                </a>
-                <a href="Store/favorites.php" title="Favorites" aria-label="Favorites">
-                    <img src="Store/images/heart.png" alt="" class="custom-icon">
-                </a>
-                <a href="Store/cart.php" title="Cart" aria-label="Cart">
-                    <img src="Store/images/shopping-cart.png" alt="" class="custom-icon">
-                </a>
-                <a href="Store/Profile.php" title="Profile" aria-label="Profile">
-                    <img src="Store/images/user.png" alt="" class="custom-icon">
-                </a>
-            </div>
-
-            <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">&#9776;</button>
-        </div>
-    </header>
+<?php include __DIR__ . '/includes/header.php'; ?>
 
     <main>
         <section class="hero" id="home">
@@ -233,37 +192,4 @@
         </section>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <img src="Store/images/logo-footer.png" alt="PARAM">
-                    <p>Comfortable, versatile, and timeless clothing for every member of the family.</p>
-                </div>
-
-                <div class="footer-column">
-                    <h3>Explore</h3>
-                    <a href="#featured">Featured</a>
-                    <a href="Store/shop.php">Shop</a>
-                    <a href="Store/AboutUs.php">About Us</a>
-                    <a href="Store/ContactUs.php">Contact Us</a>
-                </div>
-
-                <div class="footer-column">
-                    <h3>Account</h3>
-                    <a href="Store/login.php">Buyer Login</a>
-                    <a href="Store/signup.php">Create Account</a>
-                    <a href="login.php">Staff Login</a>
-                </div>
-            </div>
-
-            <div class="footer-bottom">
-                <span>&copy; <?php echo date('Y'); ?> PARAM. All rights reserved.</span>
-                <span>For educational purposes only.</span>
-            </div>
-        </div>
-    </footer>
-
-    <script src="landing.js"></script>
-</body>
-</html>
+<?php include __DIR__ . '/includes/footer.php'; ?>
