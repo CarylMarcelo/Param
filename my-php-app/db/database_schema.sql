@@ -203,6 +203,21 @@ CREATE TABLE IF NOT EXISTS cart_items (
         FOREIGN KEY (variant_id) REFERENCES product_variants(variant_id)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS favorites (
+    favorite_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    product_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_favorites_user_id (user_id),
+    INDEX idx_favorites_product_id (product_id),
+    CONSTRAINT fk_favorites_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_favorites_product
+        FOREIGN KEY (product_id) REFERENCES products(product_id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
