@@ -77,54 +77,100 @@ function saveNewPassword(array $setupToken, string $password): void
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Set up Param account</title>
+    <title>PARAM | Set Up Account</title>
+    <link rel="stylesheet" href="setup-account.css">
 </head>
 <body>
-    <main>
-        <h1>Set up your Param account</h1>
+    <main class="setup-page">
+        <a class="back-link" href="landing.php">&larr; Back to home</a>
 
-        <?php if ($passwordWasSaved): ?>
-            <p>
-                Your password has been saved.
-                <a href="login.php">Continue to login</a>.
-            </p>
-        <?php else: ?>
-            <?php if ($errorMessage): ?>
-                <p><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></p>
-            <?php endif; ?>
+        <section class="setup-card" aria-labelledby="setup-title">
+            <div class="brand-panel">
+                <img class="brand-logo" src="images/logo-header.png" alt="PARAM">
+                <p class="brand-label">PARAM Account Access</p>
+                <h1>Start securely</h1>
+                <p class="brand-copy">
+                    Create the password you will use to access your assigned
+                    PARAM account and workspace.
+                </p>
 
-            <?php if ($setupToken): ?>
-                <form method="post">
-                    <input
-                        type="hidden"
-                        name="token"
-                        value="<?= htmlspecialchars($setupTokenValue, ENT_QUOTES, 'UTF-8') ?>"
-                    >
+                <ul class="security-list">
+                    <li>Private account setup</li>
+                    <li>One-time secure link</li>
+                    <li>Role-based access</li>
+                </ul>
+            </div>
 
-                    <label>
-                        New password
-                        <input
-                            type="password"
-                            name="password"
-                            minlength="10"
-                            required
-                        >
-                    </label>
+            <div class="form-panel">
+                <?php if ($passwordWasSaved): ?>
+                    <div class="status-panel success-panel">
+                        <p class="form-label-top">Account ready</p>
+                        <h2 id="setup-title">Password saved</h2>
+                        <p class="form-intro">
+                            Your account setup is complete. You can now sign in
+                            using your email address and new password.
+                        </p>
+                        <a class="primary-link" href="login.php">Continue to login</a>
+                    </div>
+                <?php else: ?>
+                    <p class="form-label-top">Account security</p>
+                    <h2 id="setup-title">Set your password</h2>
+                    <p class="form-intro">
+                        Choose a password with at least 10 characters, then
+                        enter it again to confirm.
+                    </p>
 
-                    <label>
-                        Confirm password
-                        <input
-                            type="password"
-                            name="password_confirmation"
-                            minlength="10"
-                            required
-                        >
-                    </label>
+                    <?php if ($errorMessage): ?>
+                        <p class="error-message" role="alert">
+                            <?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?>
+                        </p>
+                    <?php endif; ?>
 
-                    <button type="submit">Save password</button>
-                </form>
-            <?php endif; ?>
-        <?php endif; ?>
+                    <?php if ($setupToken): ?>
+                        <form class="setup-form" method="post">
+                            <input
+                                type="hidden"
+                                name="token"
+                                value="<?= htmlspecialchars($setupTokenValue, ENT_QUOTES, 'UTF-8') ?>"
+                            >
+
+                            <div class="field-group">
+                                <label for="password">New password</label>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    name="password"
+                                    minlength="10"
+                                    autocomplete="new-password"
+                                    required
+                                >
+                            </div>
+
+                            <div class="field-group">
+                                <label for="password-confirmation">Confirm password</label>
+                                <input
+                                    id="password-confirmation"
+                                    type="password"
+                                    name="password_confirmation"
+                                    minlength="10"
+                                    autocomplete="new-password"
+                                    required
+                                >
+                            </div>
+
+                            <button class="setup-button" type="submit">Save password</button>
+                        </form>
+                    <?php else: ?>
+                        <a class="secondary-link" href="login.php">Return to login</a>
+                    <?php endif; ?>
+
+                    <p class="setup-note">
+                        This setup link expires after 24 hours and can only be
+                        used once.
+                    </p>
+                <?php endif; ?>
+            </div>
+        </section>
     </main>
 </body>
 </html>

@@ -20,8 +20,9 @@ $currentUserName = trim(
         name="csrf-token"
         content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>"
     >
-    <title>Param Delivery Dashboard</title>
+    <title>PARAM | Delivery Dashboard</title>
     <link rel="stylesheet" href="../AdminDashboard/admin.css">
+    <link rel="stylesheet" href="../staff-dashboard.css">
     <link rel="stylesheet" href="delivery.css">
 </head>
 <body>
@@ -39,6 +40,7 @@ $currentUserName = trim(
     <main class="seller-layout">
         <aside class="sidebar">
             <div class="sidebar-heading">
+                <p>Staff workspace</p>
                 <h1>Delivery Dashboard</h1>
             </div>
 
@@ -70,6 +72,7 @@ $currentUserName = trim(
                 <div class="section-title">
                     <p>Param Delivery</p>
                     <h2>My Assignment Summary</h2>
+                    <p class="section-description">See your assigned workload and current delivery outcomes at a glance.</p>
                 </div>
 
                 <div class="summary-grid">
@@ -99,6 +102,7 @@ $currentUserName = trim(
                 <div class="section-title">
                     <p>Assigned Only</p>
                     <h2>Delivery Tasks</h2>
+                    <p class="section-description">Update the status, notes, and proof path for deliveries assigned to your account.</p>
                 </div>
 
                 <div id="deliveryList" class="delivery-list"></div>

@@ -20,8 +20,9 @@ $currentUserName = trim(
         name="csrf-token"
         content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>"
     >
-    <title>Param Customer Service</title>
+    <title>PARAM | Customer Service Dashboard</title>
     <link rel="stylesheet" href="../AdminDashboard/admin.css">
+    <link rel="stylesheet" href="../staff-dashboard.css">
     <link rel="stylesheet" href="support.css">
 </head>
 <body>
@@ -40,6 +41,7 @@ $currentUserName = trim(
     <main class="seller-layout">
         <aside class="sidebar">
             <div class="sidebar-heading">
+                <p>Staff workspace</p>
                 <h1>Customer Service</h1>
             </div>
 
@@ -72,6 +74,7 @@ $currentUserName = trim(
                 <div class="section-title">
                     <p>Param Support</p>
                     <h2>Concern Summary</h2>
+                    <p class="section-description">Monitor open conversations, active cases, resolutions, and refund escalations.</p>
                 </div>
 
                 <div class="summary-grid">
@@ -101,6 +104,7 @@ $currentUserName = trim(
                 <div class="section-title">
                     <p>Customer Assistance</p>
                     <h2>Support Concerns</h2>
+                    <p class="section-description">Review customer messages, update their status, and save your response.</p>
                 </div>
 
                 <div id="concernList" class="support-list"></div>
@@ -110,6 +114,7 @@ $currentUserName = trim(
                 <div class="section-title">
                     <p>Escalations</p>
                     <h2>My Refund Requests</h2>
+                    <p class="section-description">Track the refund reviews you submitted for customer orders.</p>
                 </div>
 
                 <div class="table-wrap">

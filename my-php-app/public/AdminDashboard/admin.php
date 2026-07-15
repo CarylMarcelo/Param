@@ -100,7 +100,7 @@ requirePermission($currentUser, 'users.manage');
                             <input type="email" name="email" required>
                         </label>
                         <label>
-                            Admin role
+                            Account role
                             <select name="role" id="newUserRole">
                                 <!-- options are rendered by admin.js from GET /api.php?resource=roles -->
                             </select>
@@ -113,7 +113,7 @@ requirePermission($currentUser, 'users.manage');
                             </select>
                         </label>
                     </div>
-                    <button type="submit">Add Admin User</button>
+                    <button type="submit">Add User Account</button>
                 </form>
 
                 <div class="edit-list" id="userList">

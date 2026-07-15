@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'Administrator' => 'AdminDashboard/admin.php',
             'Delivery' => 'DeliveryDashboard/delivery.php',
             'Customer Service' => 'CustomerServiceDashboard/support.php',
+            'Customer' => 'Store/index.php',
         ];
         header('Location: ' . ($destinations[$user['role_name']] ?? 'index.php'));
         exit;
