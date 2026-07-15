@@ -176,12 +176,12 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                             const favLink = document.querySelector('a[title="Favorites"]');
                             if (favLink) {
-                                let badge = favLink.querySelector('.badge');
+                                let badge = favLink.querySelector('.nav-badge');
 
                                 if (data.new_count > 0) {
                                     if (!badge) {
                                         badge = document.createElement('span');
-                                        badge.className = 'badge';
+                                        badge.className = 'nav-badge';
                                         favLink.appendChild(badge);
                                     }
                                     badge.innerText = data.new_count;

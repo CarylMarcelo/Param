@@ -149,3 +149,46 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
+
+/* Container for the +/- buttons and input */
+.quantity-control {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-right: 15px;
+}
+
+.btn-qty-minus, .btn-qty-plus {
+    background-color: #f8f8f8;
+    border: none;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-dark);
+    transition: background-color 0.2s ease;
+}
+
+.btn-qty-minus:hover, .btn-qty-plus:hover {
+    background-color: #e2e2e2;
+}
+
+.quantity-input {
+    width: 40px;
+    text-align: center;
+    border: none;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    font-size: 14px;
+    padding: 6px 0;
+    color: var(--text-dark);
+    -moz-appearance: textfield; 
+}
+
+/* Hides arrows in Chrome, Safari, Edge, Opera */
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}

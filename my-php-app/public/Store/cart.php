@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'includes/db.php';
+$pdo = getDbConnection();
 
 // --- TEMPORARY BYPASS FOR TESTING ---
 // Force the session to always act like User #1 is logged in
@@ -48,9 +49,9 @@ foreach ($cart_items as $item) {
 <body>
 
     <main class="store-container">
-        <?php 
-        $path = ''; 
-        include 'includes/header.php'; 
+        <?php
+        $path = '';
+        include 'includes/header.php';
         ?>
 
         <section class="cart-section">
@@ -58,27 +59,37 @@ foreach ($cart_items as $item) {
 
             <div class="cart-layout">
                 <div class="cart-items">
-                    
+
                     <?php if (empty($cart_items)): ?>
                         <p>Your cart is currently empty.</p>
                     <?php else: ?>
                         <?php foreach ($cart_items as $item): ?>
                             <div class="cart-item">
-                                <img src="<?php echo htmlspecialchars($item['image_path']); ?>" alt="<?php echo htmlspecialchars($item['product_name']); ?>" class="cart-item-img">
+                                <img src="<?php echo htmlspecialchars($item['image_path']); ?>"
+                                    alt="<?php echo htmlspecialchars($item['product_name']); ?>" class="cart-item-img">
                                 <div class="cart-item-details">
                                     <div class="cart-item-header">
                                         <div>
-                                            <h3 class="cart-item-title"><?php echo htmlspecialchars($item['product_name']); ?></h3>
-                                            <p class="cart-item-meta">Color: <?php echo htmlspecialchars($item['color']); ?> | Size: <?php echo htmlspecialchars($item['size']); ?></p>
+                                            <h3 class="cart-item-title"><?php echo htmlspecialchars($item['product_name']); ?>
+                                            </h3>
+                                            <p class="cart-item-meta">Color: <?php echo htmlspecialchars($item['color']); ?> |
+                                                Size: <?php echo htmlspecialchars($item['size']); ?></p>
                                         </div>
                                         <p class="cart-item-price">₱<?php echo number_format($item['price'], 2); ?></p>
                                     </div>
                                     <div class="cart-item-actions">
                                         <label for="qty_<?php echo $item['cart_item_id']; ?>">Qty:</label>
-                                        <input type="number" id="qty_<?php echo $item['cart_item_id']; ?>" class="quantity-input" value="<?php echo $item['quantity']; ?>" min="1" readonly>
-                                        
-                                        <!-- Optional: Link to a remove_from_cart.php script -->
-                                        <a href="RemoveFromCart.php?id=<?php echo $item['cart_item_id']; ?>" class="btn-remove" style="text-decoration: none;">Remove</a>
+
+                                        <div class="quantity-control">
+                                            <button type="button" class="btn-qty-minus">−</button>
+                                            <input type="number" id="qty_<?php echo $item['cart_item_id']; ?>"
+                                                class="quantity-input" value="<?php echo $item['quantity']; ?>" min="1"
+                                                readonly>
+                                            <button type="button" class="btn-qty-plus">+</button>
+                                        </div>
+
+                                        <a href="RemoveFromCart.php?id=<?php echo $item['cart_item_id']; ?>" class="btn-remove"
+                                            style="text-decoration: none;">Remove</a>
                                     </div>
                                 </div>
                             </div>
@@ -91,8 +102,9 @@ foreach ($cart_items as $item) {
                     <h3 class="summary-title">Order Summary</h3>
 
                     <div class="summary-row">
-                        <span>Subtotal (<?php echo $total_items; ?> Items)</span>
-                        <span>₱<?php echo number_format($subtotal, 2); ?></span>
+                        <span id="summary-items-count">Subtotal (<?php echo $total_items; ?> Items)</span>
+
+                        <span id="summary-subtotal">₱<?php echo number_format($subtotal, 2); ?></span>
                     </div>
                     <div class="summary-row">
                         <span>Shipping</span>
@@ -101,7 +113,8 @@ foreach ($cart_items as $item) {
 
                     <div class="summary-total">
                         <span>Total</span>
-                        <span>₱<?php echo number_format($subtotal, 2); ?></span>
+
+                        <span id="summary-total">₱<?php echo number_format($subtotal, 2); ?></span>
                     </div>
 
                     <?php if (!empty($cart_items)): ?>
@@ -113,7 +126,67 @@ foreach ($cart_items as $item) {
         </section>
     </main>
 
-<?php 
-$path = ''; 
-include 'includes/footer.php'; 
-?>
+    <?php
+    $path = '';
+    include 'includes/footer.php';
+    ?>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+
+            // --- NEW FUNCTION: Send Data to Backend & Update HTML ---
+            function updateQuantityInDB(cartItemId, newQuantity) {
+                fetch('updateCartQuantity.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'cart_item_id=' + cartItemId + '&quantity=' + newQuantity
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Format the number to look like currency (e.g., 1,500.00)
+                            let formattedPrice = '₱' + data.subtotal.toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+
+                            // Inject the updated data from the database directly into the page
+                            document.getElementById('summary-items-count').innerText = `Subtotal (${data.total_items} Items)`;
+                            document.getElementById('summary-subtotal').innerText = formattedPrice;
+                            document.getElementById('summary-total').innerText = formattedPrice;
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+
+            document.querySelectorAll('.btn-qty-plus').forEach(button => {
+                button.addEventListener('click', function () {
+                    let input = this.previousElementSibling;
+                    let newValue = parseInt(input.value) + 1;
+                    input.value = newValue;
+
+                    let cartItemId = input.id.split('_')[1];
+                    updateQuantityInDB(cartItemId, newValue); 
+                });
+            });
+
+            document.querySelectorAll('.btn-qty-minus').forEach(button => {
+                button.addEventListener('click', function () {
+                    let input = this.nextElementSibling;
+                    let currentValue = parseInt(input.value);
+
+                    if (currentValue > 1) {
+                        let newValue = currentValue - 1;
+                        input.value = newValue; 
+
+                        let cartItemId = input.id.split('_')[1];
+                        updateQuantityInDB(cartItemId, newValue); 
+
+                    } else if (currentValue === 1) {
+                        let cartItemId = input.id.split('_')[1];
+                        window.location.href = 'RemoveFromCart.php?id=' + cartItemId;
+                    }
+                });
+            });
+        });
+    </script>

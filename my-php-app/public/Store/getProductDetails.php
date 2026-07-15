@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'includes/db.php';
+$pdo = getDbConnection();
 
 if (!isset($_GET['id'])) {
     echo "<p>Error: No product selected.</p>";

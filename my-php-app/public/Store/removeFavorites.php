@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'includes/db.php';
+$pdo = getDbConnection();
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');

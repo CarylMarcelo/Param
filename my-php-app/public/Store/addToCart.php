@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'includes/db.php';
+$pdo = getDbConnection();
 
 if (!isset($_SESSION['user_id'])) {
     echo "<script>alert('Please log in to add items to your cart.'); window.location.href='login.php';</script>";
@@ -51,11 +52,10 @@ if (isset($_POST['product_id'], $_POST['size'], $_POST['color'])) {
     if (isset($_POST['action']) && $_POST['action'] === 'checkout') {
         // Redirect to checkout if "Buy Now" was clicked
         header("Location: checkout.php?variant_id=" . $variant_id);
-        ("Location: checkout.php");
         exit;
     } else {
-        // Keep shopping if "Add to Cart" was clicked
-        header("Location: checkout.php?variant_id=" . $variant_id);
+        // Go to cart if "Add to Cart" was clicked
+        header("Location: cart.php");
         exit;
     }
 
