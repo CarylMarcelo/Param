@@ -2,6 +2,9 @@
 session_start();
 require_once 'includes/db.php';
 
+// 1. THIS IS THE FIX: Get the database connection using the new function
+$pdo = getDbConnection();
+
 // --- TEMPORARY BYPASS FOR TESTING ---
 // Act as the dummy Customer (ID: 999)
 $_SESSION['user_id'] = 999;
