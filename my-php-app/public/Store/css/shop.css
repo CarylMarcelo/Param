@@ -72,15 +72,18 @@
 
 /* The Modal Content Box */
 .modal-content {
-  background-color: #fff;
-  margin: 10% auto;
-  padding: 25px;
+  background-color: #fefefe;
+  padding: 30px;
+  border-radius: 8px;
   width: 90%;
-  max-width: 450px;
-  border-radius: 12px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  position: relative;
-  animation: modalFadeIn 0.3s ease-out;
+  max-width: 600px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .close-btn {
@@ -107,4 +110,126 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.variant-grid-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+  margin: 25px 0;
+}
+
+.variant-column {
+  flex: 1;
+}
+
+.variant-label {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.selected-text {
+  font-weight: bold;
+  color: var(--ink);
+}
+
+.custom-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* -----------------------------------
+  COLOR SWATCH STYLES
+----------------------------------- */
+.color-swatch-label {
+  cursor: pointer;
+}
+.color-swatch-label input[type="radio"] {
+  display: none;
+}
+.color-swatch {
+  display: block;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+.color-swatch-label input[type="radio"]:checked + .color-swatch {
+  border: 2px solid #000;
+  transform: scale(1.1);
+}
+
+/* -----------------------------------
+  SIZE BOX STYLES
+----------------------------------- */
+.size-box-label {
+  cursor: pointer;
+}
+.size-box-label input[type="radio"] {
+  display: none;
+}
+.size-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 45px;
+  height: 45px;
+  padding: 0 10px;
+  background-color: #fff;
+  border: 1px solid #999;
+  font-weight: bold;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.size-box-label input[type="radio"]:checked + .size-box {
+  background-color: #2d2926;
+  color: #fff;
+  border-color: #2d2926;
+  box-shadow:
+    0 0 0 2px #fff inset,
+    0 0 0 3px #2d2926;
+}
+
+/* -----------------------------------
+  SUBMIT BUTTON
+----------------------------------- */
+.btn-cart-submit {
+  width: 100%;
+  padding: 15px;
+  background-color: var(--maroon);
+  color: white;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.btn-cart-submit:hover {
+  background-color: var(--gold);
+  color: var(--maroon);
+}
+
+/* Outlined version for the Add to Cart button */
+.btn-cart-submit.btn-outline {
+  background-color: transparent;
+  color: var(--maroon);
+  border: 2px solid var(--maroon);
+}
+
+.btn-cart-submit.btn-outline:hover {
+  background-color: var(--maroon);
+  color: var(--white);
+}
+
+.btn-favorite-card.is-favorited .heart-icon {
+  opacity: 1;
+  filter: invert(16%) sepia(99%) saturate(7404%) hue-rotate(355deg)
+    brightness(96%) contrast(113%);
 }

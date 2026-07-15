@@ -1,6 +1,37 @@
 <?php
 $path = isset($path) ? $path : '';
 $current_page = basename($_SERVER['PHP_SELF']);
+
+// --- FETCH CART & FAVORITES COUNT ---
+$cart_count = 0;
+$fav_count = 0;
+
+if (isset($_SESSION['user_id']) && isset($pdo)) {
+    $user_id = $_SESSION['user_id'];
+
+    // 1. Get total quantity of items in the active cart
+    try {
+        $cart_stmt = $pdo->prepare("
+            SELECT SUM(quantity) 
+            FROM cart_items ci 
+            JOIN carts c ON ci.cart_id = c.cart_id 
+            WHERE c.user_id = ? AND c.status = 'active'
+        ");
+        $cart_stmt->execute([$user_id]);
+        $cart_count = $cart_stmt->fetchColumn() ?: 0;
+    } catch (PDOException $e) {
+        $cart_count = 0;
+    }
+
+    // 2. Get total number of favorites
+    try {
+        $fav_stmt = $pdo->prepare("SELECT COUNT(*) FROM favorites WHERE user_id = ?");
+        $fav_stmt->execute([$user_id]);
+        $fav_count = $fav_stmt->fetchColumn() ?: 0;
+    } catch (PDOException $e) {
+        $fav_count = 0;
+    }
+}
 ?>
 
 <header class="navbar">
@@ -24,16 +55,23 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
 
         <!-- Favorites Icon -->
-        <a href="<?php echo $path; ?>favorites.php" title="Favorites" <?php if ($current_page == 'favorites.php')
-               echo 'class="active-icon"'; ?>>
+        <a href="<?php echo $path; ?>favorites.php" title="Favorites"
+            class="icon-wrapper <?php if ($current_page == 'favorites.php')
+                echo 'active-icon'; ?>">
             <img src="<?php echo $path; ?>images/heart.png" alt="Favorites" class="custom-icon">
+            <?php if ($fav_count > 0): ?>
+                <span class="nav-badge"><?php echo $fav_count; ?></span>
+            <?php endif; ?>
         </a>
 
         <!-- Cart Icon -->
         <a href="<?php echo $path; ?>cart.php" title="Cart"
-            class="cart-link <?php if ($current_page == 'cart.php')
+            class="icon-wrapper cart-link <?php if ($current_page == 'cart.php')
                 echo 'active-icon'; ?>">
             <img src="<?php echo $path; ?>images/shopping-cart.png" alt="Cart" class="custom-icon">
+            <?php if ($cart_count > 0): ?>
+                <span class="nav-badge"><?php echo $cart_count; ?></span>
+            <?php endif; ?>
         </a>
 
         <!-- Profile Icon -->

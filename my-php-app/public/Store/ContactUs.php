@@ -1,4 +1,7 @@
 <?php
+session_start();
+require_once 'includes/db.php';
+
 // Contact Details 
 $pageTitle         = "Contact Us";
 $brandName         = "Param";

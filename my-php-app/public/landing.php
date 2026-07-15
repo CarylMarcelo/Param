@@ -1,4 +1,7 @@
 <?php 
+session_start();
+require_once 'store/includes/db.php';
+
 $path = 'store/'; 
 ?>
 <!DOCTYPE html>

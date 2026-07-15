@@ -13,6 +13,14 @@ if (!isset($_SESSION['user_id'])) {
 }
 */
 
+// --- GET USER'S FAVORITED PRODUCTS ---
+$user_favorites = [];
+if (isset($_SESSION['user_id'])) {
+    $fav_stmt = $pdo->prepare("SELECT product_id FROM favorites WHERE user_id = ?");
+    $fav_stmt->execute([$_SESSION['user_id']]);
+    $user_favorites = $fav_stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
 $cat = isset($_GET['cat']) ? (int) $_GET['cat'] : 0;
 $sort = $_GET['sort'] ?? 'featured';
 
@@ -56,9 +64,9 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
 
     <main class="store-container">
-        <?php 
-        $path = ''; 
-        include 'includes/header.php'; 
+        <?php
+        $path = '';
+        include 'includes/header.php';
         ?>
 
         <section class="product-section">
@@ -95,13 +103,19 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="product-grid">
 
                 <?php foreach ($products as $item): ?>
+                    <?php
+                    $is_faved = in_array($item['product_id'], $user_favorites);
+                    ?>
+
                     <div class="product-card">
                         <div class="product-image-container">
                             <img src="<?php echo htmlspecialchars($item['image_path']); ?>"
                                 alt="<?php echo htmlspecialchars($item['product_name']); ?>" class="product-image">
-                            <button class="btn-favorite-card" title="Add to Favorites"
-                                data-id="<?php echo $item['product_id']; ?>">
-                                <img src="images/heart.png" alt="Favorite" class="heart-icon">
+
+                            <button class="btn-favorite-card <?php echo $is_faved ? 'is-favorited' : ''; ?>"
+                                title="Add to Favorites" data-id="<?php echo $item['product_id']; ?>">
+                                <img src="images/<?php echo $is_faved ? 'love.png' : 'heart.png'; ?>" alt="Favorite"
+                                    class="heart-icon">
                             </button>
                         </div>
 
@@ -118,12 +132,11 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     </main>
 
-    <?php 
-    $path = ''; 
-    include 'includes/footer.php'; 
+    <?php
+    $path = '';
+    include 'includes/footer.php';
     ?>
 
-    <!-- Modal structure moved ABOVE the scripts so the JS can find the close button -->
     <div id="cartModal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
@@ -134,21 +147,64 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <script>
         document.querySelectorAll('.btn-favorite-card').forEach(button => {
-            button.addEventListener('click', function () {
+            button.addEventListener('click', function (e) {
+                e.preventDefault();
                 const productId = this.getAttribute('data-id');
+                const btn = this;
+
                 fetch('addFavorites.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'product_id=' + productId
                 })
-                    .then(response => response.text())
-                    .then(data => alert('Added to favorites!'));
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+
+                            const heartIcon = btn.querySelector('.heart-icon');
+
+                            if (data.is_favorited) {
+                                btn.classList.add('is-favorited');
+                                if (heartIcon) heartIcon.src = 'images/love.png';
+                            } else {
+                                btn.classList.remove('is-favorited');
+                                if (heartIcon) heartIcon.src = 'images/heart.png';
+                            }
+
+                            const favLink = document.querySelector('a[title="Favorites"]');
+                            if (favLink) {
+                                let badge = favLink.querySelector('.badge');
+
+                                if (data.new_count > 0) {
+                                    if (!badge) {
+                                        badge = document.createElement('span');
+                                        badge.className = 'badge';
+                                        favLink.appendChild(badge);
+                                    }
+                                    badge.innerText = data.new_count;
+                                } else {
+                                    if (badge) {
+                                        badge.remove();
+                                    }
+                                }
+                            }
+
+                            if (heartIcon) {
+                                heartIcon.style.transform = 'scale(1.3)';
+                                setTimeout(() => { heartIcon.style.transform = 'scale(1)'; }, 200);
+                            }
+
+                        } else if (data.status === 'error' && data.message === 'not_logged_in') {
+                            window.location.href = 'login.php';
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
             });
         });
     </script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const modal = document.getElementById('cartModal');
             const closeBtn = document.querySelector('.close-btn');
 
@@ -171,7 +227,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 });
             }
 
-            window.addEventListener('click', function(event) {
+            window.addEventListener('click', function (event) {
                 if (event.target === modal) {
                     modal.style.display = 'none';
                 }

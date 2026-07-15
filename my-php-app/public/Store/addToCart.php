@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 
 if (isset($_POST['product_id'], $_POST['size'], $_POST['color'])) {
     $user_id = $_SESSION['user_id'];
-    $product_id = (int)$_POST['product_id'];
+    $product_id = (int) $_POST['product_id'];
     $size = $_POST['size'];
     $color = $_POST['color'];
 
@@ -47,8 +47,18 @@ if (isset($_POST['product_id'], $_POST['size'], $_POST['color'])) {
         $insert_item->execute([$cart_id, $variant_id]);
     }
 
-    header("Location: shop.php?added=success");
-    exit;
+    // --- CHECK WHICH BUTTON WAS CLICKED ---
+    if (isset($_POST['action']) && $_POST['action'] === 'checkout') {
+        // Redirect to checkout if "Buy Now" was clicked
+        header("Location: checkout.php?variant_id=" . $variant_id);
+        ("Location: checkout.php");
+        exit;
+    } else {
+        // Keep shopping if "Add to Cart" was clicked
+        header("Location: checkout.php?variant_id=" . $variant_id);
+        exit;
+    }
+
 } else {
     header("Location: shop.php");
     exit;

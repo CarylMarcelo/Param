@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'includes/db.php';
 
 // User information placeholders
 $fullName   = $_SESSION['user_fullname'] ?? '';

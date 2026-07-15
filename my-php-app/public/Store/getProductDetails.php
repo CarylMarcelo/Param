@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once 'includes/db.php';
 
 if (!isset($_GET['id'])) {
@@ -31,46 +32,79 @@ function displaySizeWithUnit($size) {
     }
     return $size;
 }
+
+$colors = array_unique(array_column($variants, 'color'));
+$sizes = array_unique(array_column($variants, 'size'));
+
+$colorHexMap = [
+    'Black' => '#000000', 'White' => '#FFFFFF', 'Off White' => '#f8f8f2',
+    'Navy' => '#1a2a40', 'Blue' => '#4A90E2', 'Light Blue' => '#a1c6ea',
+    'Red' => '#d32f2f', 'Pink' => '#f48fb1', 'Beige' => '#f5f5dc',
+    'Brown' => '#795548', 'Dark Brown' => '#4e342e', 'Green' => '#4caf50',
+    'Dark Green' => '#2e7d32', 'Olive' => '#808000', 'Olive Green' => '#556b2f',
+    'Gray' => '#9e9e9e', 'Light Gray' => '#e0e0e0', 'Dark Gray' => '#616161',
+    'Purple' => '#9c27b0', 'Indigo' => '#3f51b5', 'Natural' => '#eaddcf',
+    'Khaki' => '#c3b091', 'Striped' => 'repeating-linear-gradient(45deg, #fff, #fff 5px, #333 5px, #333 10px)'
+];
 ?>
 
 <div style="text-align: center;">
     <img src="<?php echo htmlspecialchars($product['image_path']); ?>" alt="<?php echo htmlspecialchars($product['product_name']); ?>" style="width: 150px; border-radius: 8px;">
-    <h3 style="color: var(--primary-maroon, #800000); margin-top: 15px; margin-bottom: 20px;"><?php echo htmlspecialchars($product['product_name']); ?></h3>
+    
+    <h3 style="color: var(--maroon); margin-top: 15px; margin-bottom: 5px;">
+        <?php echo htmlspecialchars($product['product_name']); ?>
+    </h3>
+    
+    <!-- PRICE HERE -->
+    <p style="font-size: 1.2rem; font-weight: bold; color: var(--maroon); margin-top: 0; margin-bottom: 20px;">
+        ₱<?php echo number_format($product['price'], 2); ?>
+    </p>
 </div>
 
 <form action="addToCart.php" method="POST" style="display: flex; flex-direction: column;">
     <input type="hidden" name="product_id" value="<?php echo $id; ?>">
     
-    <div style="display: flex; gap: 15px; margin-bottom: 20px; width: 100%;">
-        
-        <!-- Size Container -->
-        <div style="flex: 1;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px; text-align: left;">Size:</label>
-            <select name="size" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                <?php 
-                $sizes = array_unique(array_column($variants, 'size'));
-                foreach($sizes as $size): 
+    <div class="variant-grid-container">
+        <!-- LEFT COLUMN: COLORS -->
+        <div class="variant-column">
+            <p class="variant-label">Color: <span id="display-color" class="selected-text"></span></p>
+            <div class="custom-radio-group">
+                <?php foreach ($colors as $color): 
+                    $cssColor = $colorHexMap[$color] ?? '#ccc'; 
                 ?>
-                    <option value="<?php echo htmlspecialchars($size); ?>">
-                        <?php echo htmlspecialchars(displaySizeWithUnit($size)); ?>
-                    </option>
+                    <label class="color-swatch-label">
+                        <input type="radio" name="color" value="<?php echo htmlspecialchars($color); ?>" required onchange="updateSelection('display-color', this.value)">
+                        <span class="color-swatch" style="background: <?php echo $cssColor; ?>;" title="<?php echo htmlspecialchars($color); ?>"></span>
+                    </label>
                 <?php endforeach; ?>
-            </select>
+            </div>
         </div>
 
-        <div style="flex: 1;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px; text-align: left;">Color:</label>
-            <select name="color" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                <?php 
-                $colors = array_unique(array_column($variants, 'color'));
-                foreach($colors as $color): 
-                ?>
-                    <option value="<?php echo htmlspecialchars($color); ?>"><?php echo htmlspecialchars($color); ?></option>
+        <!-- RIGHT COLUMN: SIZES -->
+        <div class="variant-column">
+            <p class="variant-label">Size: <span id="display-size" class="selected-text"></span></p>
+            <div class="custom-radio-group">
+                <?php foreach ($sizes as $size): ?>
+                    <label class="size-box-label">
+                        <input type="radio" name="size" value="<?php echo htmlspecialchars($size); ?>" required onchange="updateSelection('display-size', this.nextElementSibling.innerText)">
+                        <span class="size-box"><?php echo htmlspecialchars(displaySizeWithUnit($size)); ?></span>
+                    </label>
                 <?php endforeach; ?>
-            </select>
+            </div>
         </div>
-        
     </div>
     
-    <button type="submit" style="background-color: var(--primary-maroon, #800000); color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;">Confirm Add to Cart</button>
+    <div style="display: flex; gap: 15px; margin-top: 25px;">
+        <!-- The Add to Cart button -->
+        <button type="submit" name="action" value="cart" class="btn-cart-submit btn-outline" style="flex: 1;">Add to Cart</button>
+        
+        <!-- The Buy Now button -->
+        <button type="submit" name="action" value="checkout" class="btn-cart-submit" style="flex: 1;">Buy Now</button>
+    </div>
 </form>
+
+<script>
+function updateSelection(elementId, value) {
+    document.getElementById(elementId).innerText = value.toUpperCase();
+}
+</script>

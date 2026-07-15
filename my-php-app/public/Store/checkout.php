@@ -1,3 +1,44 @@
+<?php
+session_start();
+require_once 'includes/db.php';
+
+// --- TEMPORARY BYPASS FOR TESTING ---
+$_SESSION['user_id'] = 999;
+$user_id = $_SESSION['user_id'];
+
+// Check if a specific variant_id was passed (for "Buy Now")
+$variant_id = isset($_GET['variant_id']) ? (int) $_GET['variant_id'] : null;
+
+if ($variant_id) {
+    // FETCH ONLY THE SPECIFIC ITEM
+    $query = "SELECT 1 as quantity, v.size, v.color, v.price, p.product_name, p.image_path 
+              FROM product_variants v
+              JOIN products p ON v.product_id = p.product_id
+              WHERE v.variant_id = :variant_id";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute(['variant_id' => $variant_id]);
+} else {
+    // FETCH FULL CART (DEFAULT)
+    $query = "SELECT ci.quantity, v.size, v.color, v.price, p.product_name, p.image_path 
+              FROM cart_items ci
+              JOIN carts c ON ci.cart_id = c.cart_id
+              JOIN product_variants v ON ci.variant_id = v.variant_id
+              JOIN products p ON v.product_id = p.product_id
+              WHERE c.user_id = :user_id AND c.status = 'active'";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute(['user_id' => $user_id]);
+}
+$cart_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$subtotal = 0;
+foreach ($cart_items as $item) {
+    $subtotal += $item['price'] * $item['quantity'];
+}
+
+$shipping = 150.00;
+$total = $subtotal + $shipping;
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -13,19 +54,18 @@
 <body>
 
     <main class="store-container">
-        <?php 
-        $path = ''; 
-        include 'includes/header.php'; 
+        <?php
+        $path = '';
+        include 'includes/header.php';
         ?>
 
         <section class="checkout-section">
             <h2 class="section-title">Checkout</h2>
 
-            <div class="checkout-layout">
+            <form action="payment.php" method="POST" id="checkout-form">
+                <div class="checkout-layout">
 
-                <div class="checkout-form-area">
-                    <form action="payment.php" method="POST">
-
+                    <div class="checkout-form-area">
                         <div class="form-section">
                             <h3 class="form-title">Contact Information</h3>
                             <div class="form-group">
@@ -71,71 +111,70 @@
 
                         <div class="form-section">
                             <h3 class="form-title">Payment Method</h3>
-
                             <label class="payment-option">
-                                <input type="radio" name="payment_method" value="card" checked>
+                                <input type="radio" name="payment_method" value="card" checked required>
                                 <span class="payment-label">Credit / Debit Card</span>
                             </label>
-
                             <label class="payment-option">
-                                <input type="radio" name="payment_method" value="gcash">
+                                <input type="radio" name="payment_method" value="gcash" required>
                                 <span class="payment-label">GCash</span>
                             </label>
-
                             <label class="payment-option">
-                                <input type="radio" name="payment_method" value="cod">
+                                <input type="radio" name="payment_method" value="cod" required>
                                 <span class="payment-label">Cash on Delivery (COD)</span>
                             </label>
                         </div>
+                    </div>
 
-                    </form>
-                </div>
+                    <div class="checkout-summary">
+                        <h3 class="summary-title">Your Order</h3>
 
-                <div class="checkout-summary">
-                    <h3 class="summary-title">Your Order</h3>
-
-                    <div class="summary-items">
-                        <div class="summary-item">
-                            <img src="images/prod1.avif" alt="Kids Parka" class="summary-item-img">
-                            <div class="summary-item-details">
-                                <p class="summary-item-name">Kids Pocketable UV Protection Parka</p>
-                                <p class="summary-item-meta">Qty: 1</p>
-                            </div>
-                            <p class="summary-item-price">₱1,490.00</p>
+                        <div class="summary-items">
+                            <?php if (empty($cart_items)): ?>
+                                <p>Your cart is empty.</p>
+                            <?php else: ?>
+                                <?php foreach ($cart_items as $item): ?>
+                                    <div class="summary-item">
+                                        <img src="<?php echo htmlspecialchars($item['image_path']); ?>"
+                                            alt="<?php echo htmlspecialchars($item['product_name']); ?>"
+                                            class="summary-item-img">
+                                        <div class="summary-item-details">
+                                            <p class="summary-item-name"><?php echo htmlspecialchars($item['product_name']); ?>
+                                            </p>
+                                            <p class="summary-item-meta">Color: <?php echo htmlspecialchars($item['color']); ?>
+                                                | Size: <?php echo htmlspecialchars($item['size']); ?></p>
+                                            <p class="summary-item-meta">Qty: <?php echo $item['quantity']; ?></p>
+                                        </div>
+                                        <p class="summary-item-price">
+                                            ₱<?php echo number_format($item['price'] * $item['quantity'], 2); ?></p>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
-                        <div class="summary-item">
-                            <img src="images/prod4.avif" alt="Washable Polo" class="summary-item-img">
-                            <div class="summary-item-details">
-                                <p class="summary-item-name">Washable 3D Knit Polo</p>
-                                <p class="summary-item-meta">Qty: 1</p>
-                            </div>
-                            <p class="summary-item-price">₱2,490.00</p>
+
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span>₱<?php echo number_format($subtotal, 2); ?></span>
                         </div>
+                        <div class="summary-row">
+                            <span>Standard Shipping</span>
+                            <span>₱<?php echo number_format($shipping, 2); ?></span>
+                        </div>
+
+                        <div class="summary-total">
+                            <span>Total</span>
+                            <span>₱<?php echo number_format($total, 2); ?></span>
+                        </div>
+
+                        <button type="submit" class="btn-place-order">Place Order</button>
                     </div>
 
-                    <div class="summary-row">
-                        <span>Subtotal</span>
-                        <span>₱3,980.00</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>Standard Shipping</span>
-                        <span>₱150.00</span>
-                    </div>
-
-                    <div class="summary-total">
-                        <span>Total</span>
-                        <span>₱4,130.00</span>
-                    </div>
-
-                    <a href="payment.php" class="btn-place-order">Place Order</a>
                 </div>
-
-            </div>
+            </form>
         </section>
-
     </main>
 
-<?php 
-$path = ''; 
-include 'includes/footer.php'; 
-?>
+    <?php
+    $path = '';
+    include 'includes/footer.php';
+    ?>
