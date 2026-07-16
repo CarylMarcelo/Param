@@ -1,11 +1,21 @@
 <?php
-session_start();
-require_once 'includes/db.php';
-$pdo = getDbConnection();
+require_once __DIR__ . '/../../src/middleware/authentication.php';
+require_once __DIR__ . '/includes/db.php';
+
+ensureSessionStarted();
 
 if (!isset($_SESSION['user_id'])) {
-    echo "<script>alert('Please log in to add items to your cart.'); window.location.href='login.php';</script>";
+    redirectTo('login');
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: shop.php');
     exit;
+}
+
+if (!hash_equals(csrfToken(), (string) ($_POST['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    exit('Your form session expired. Return to the store and try again.');
 }
 
 if (isset($_POST['product_id'], $_POST['size'], $_POST['color'])) {
@@ -14,7 +24,11 @@ if (isset($_POST['product_id'], $_POST['size'], $_POST['color'])) {
     $size = $_POST['size'];
     $color = $_POST['color'];
 
-    $variant_stmt = $pdo->prepare("SELECT variant_id FROM product_variants WHERE product_id = ? AND size = ? AND color = ?");
+    $variant_stmt = $pdo->prepare(
+        "SELECT variant_id FROM product_variants
+         WHERE product_id = ? AND size = ? AND color = ?
+           AND status = 'active' AND stock_quantity > 0"
+    );
     $variant_stmt->execute([$product_id, $size, $color]);
     $variant = $variant_stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -23,6 +37,12 @@ if (isset($_POST['product_id'], $_POST['size'], $_POST['color'])) {
         exit;
     }
     $variant_id = $variant['variant_id'];
+
+    // Buy Now checks out one selected variant without modifying the customer's cart.
+    if (isset($_POST['action']) && $_POST['action'] === 'checkout') {
+        header('Location: checkout.php?variant_id=' . (int) $variant_id);
+        exit;
+    }
 
     $cart_stmt = $pdo->prepare("SELECT cart_id FROM carts WHERE user_id = ? AND status = 'active'");
     $cart_stmt->execute([$user_id]);
@@ -48,16 +68,8 @@ if (isset($_POST['product_id'], $_POST['size'], $_POST['color'])) {
         $insert_item->execute([$cart_id, $variant_id]);
     }
 
-    // --- CHECK WHICH BUTTON WAS CLICKED ---
-    if (isset($_POST['action']) && $_POST['action'] === 'checkout') {
-        // Redirect to checkout if "Buy Now" was clicked
-        header("Location: checkout.php?variant_id=" . $variant_id);
-        exit;
-    } else {
-        // Go to cart if "Add to Cart" was clicked
-        header("Location: cart.php");
-        exit;
-    }
+    header('Location: cart.php');
+    exit;
 
 } else {
     header("Location: shop.php");

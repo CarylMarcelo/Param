@@ -1,5 +1,6 @@
 (function () {
-  var API = "../customer-service-api.php",
+  var baseUrl = document.querySelector('meta[name="app-base-url"]').content,
+    API = baseUrl + "/support-api",
     token = document.querySelector('meta[name="csrf-token"]').content,
     notice = document.getElementById("notice"),
     list = document.getElementById("concernList"),
@@ -30,7 +31,7 @@
     }
     return fetch(u, c).then(function (r) {
       if (r.status === 401) {
-        location = "../login.php";
+        location = baseUrl + "/login";
         throw Error("Not authenticated");
       }
       return r.json().then(function (d) {

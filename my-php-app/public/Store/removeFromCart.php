@@ -1,11 +1,11 @@
 <?php
-session_start();
-require_once 'includes/db.php';
-$pdo = getDbConnection();
+require_once __DIR__ . '/../../src/middleware/authentication.php';
+require_once __DIR__ . '/includes/db.php';
+
+ensureSessionStarted();
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
+    redirectTo('login');
 }
 
 if (isset($_GET['id'])) {
@@ -16,7 +16,8 @@ if (isset($_GET['id'])) {
     DELETE FROM cart_items 
         WHERE cart_item_id = :cart_item_id 
         AND cart_id IN (
-            SELECT cart_id FROM carts WHERE user_id = :user_id
+            SELECT cart_id FROM carts
+            WHERE user_id = :user_id AND status = 'active'
         )
     ");
     

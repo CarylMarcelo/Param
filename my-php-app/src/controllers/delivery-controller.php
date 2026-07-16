@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../services/audit-log-service.php';
 
 class DeliveryController
 {
@@ -9,6 +10,7 @@ class DeliveryController
         $query = "SELECT
                     deliveries.delivery_id,
                     deliveries.order_id,
+                    deliveries.assigned_to_user_id,
                     CONCAT_WS(' ', customers.first_name, customers.middle_name, customers.last_name, customers.suffix) AS customer_name,
                     orders.delivery_address_snapshot,
                     CASE
@@ -35,7 +37,9 @@ class DeliveryController
                       LIMIT 1
                   )
                   WHERE deliveries.assigned_to_user_id = :delivery_user_id
+                     OR deliveries.assigned_to_user_id IS NULL
                   ORDER BY
+                    deliveries.assigned_to_user_id IS NOT NULL DESC,
                     FIELD(
                         deliveries.delivery_status,
                         'pending',
@@ -62,7 +66,8 @@ class DeliveryController
                 SUM(delivery_status IN ('pending', 'assigned', 'picked_up', 'in_transit')) AS active,
                 SUM(delivery_status = 'failed') AS failed
              FROM deliveries
-             WHERE assigned_to_user_id = :delivery_user_id"
+             WHERE assigned_to_user_id = :delivery_user_id
+                OR assigned_to_user_id IS NULL"
         );
         $statement->execute(['delivery_user_id' => $deliveryUserId]);
 
@@ -74,6 +79,62 @@ class DeliveryController
         ];
 
         return array_map('intval', $summary);
+    }
+
+    public static function claim(int $deliveryId, int $deliveryUserId): array
+    {
+        $database = getDbConnection();
+        $database->beginTransaction();
+
+        try {
+            $statement = $database->prepare(
+                "UPDATE deliveries
+                 SET assigned_to_user_id = :delivery_user_id,
+                     assigned_at = COALESCE(assigned_at, NOW()),
+                     delivery_status = CASE
+                         WHEN delivery_status = 'pending' THEN 'assigned'
+                         ELSE delivery_status
+                     END
+                 WHERE delivery_id = :delivery_id
+                   AND assigned_to_user_id IS NULL"
+            );
+            $statement->execute([
+                'delivery_id' => $deliveryId,
+                'delivery_user_id' => $deliveryUserId,
+            ]);
+
+            if ($statement->rowCount() !== 1) {
+                if (self::isAssignedToUser($deliveryId, $deliveryUserId, $database)) {
+                    $database->commit();
+                    return ['success' => true, 'already_claimed' => true];
+                }
+
+                $database->rollBack();
+                http_response_code(409);
+                return ['error' => 'This delivery was already claimed by another delivery user.'];
+            }
+
+            $syncOrder = $database->prepare(
+                'UPDATE orders
+                 SET order_status = :order_status
+                 WHERE order_id = (
+                     SELECT order_id FROM deliveries WHERE delivery_id = :delivery_id
+                 )'
+            );
+            $syncOrder->execute([
+                'order_status' => 'processing',
+                'delivery_id' => $deliveryId,
+            ]);
+
+            self::recordAudit($deliveryUserId, $deliveryId, 'assigned', $database, 'delivery.claim');
+            $database->commit();
+            return ['success' => true];
+        } catch (Throwable $exception) {
+            if ($database->inTransaction()) {
+                $database->rollBack();
+            }
+            throw $exception;
+        }
     }
 
     public static function update(
@@ -97,41 +158,75 @@ class DeliveryController
         }
 
         $database = getDbConnection();
-        $statement = $database->prepare(
-            "UPDATE deliveries
-             SET delivery_status = :status,
-                 delivery_notes = :notes,
-                 proof_image_path = :proof_image_path,
-                 delivered_at = CASE
-                     WHEN :delivered_status = 'delivered'
-                     THEN COALESCE(delivered_at, NOW())
-                     ELSE NULL
-                 END
-             WHERE delivery_id = :delivery_id
-               AND assigned_to_user_id = :delivery_user_id"
-        );
-        $statement->execute([
-            'status' => $status,
-            'notes' => trim((string) ($input['notes'] ?? '')) ?: null,
-            'proof_image_path' => trim((string) ($input['proof'] ?? '')) ?: null,
-            'delivered_status' => $status,
-            'delivery_id' => $deliveryId,
-            'delivery_user_id' => $deliveryUserId,
-        ]);
+        $database->beginTransaction();
+        try {
+            $statement = $database->prepare(
+                "UPDATE deliveries
+                 SET delivery_status = :status,
+                     delivery_notes = :notes,
+                     proof_image_path = :proof_image_path,
+                     delivered_at = CASE
+                         WHEN :delivered_status = 'delivered'
+                         THEN COALESCE(delivered_at, NOW())
+                         ELSE NULL
+                     END
+                 WHERE delivery_id = :delivery_id
+                   AND assigned_to_user_id = :delivery_user_id"
+            );
+            $statement->execute([
+                'status' => $status,
+                'notes' => trim((string) ($input['notes'] ?? '')) ?: null,
+                'proof_image_path' => trim((string) ($input['proof'] ?? '')) ?: null,
+                'delivered_status' => $status,
+                'delivery_id' => $deliveryId,
+                'delivery_user_id' => $deliveryUserId,
+            ]);
 
-        if ($statement->rowCount() === 0 && !self::isAssignedToUser($deliveryId, $deliveryUserId)) {
-            http_response_code(404);
-            return ['error' => 'Assigned delivery not found'];
+            if ($statement->rowCount() === 0
+                && !self::isAssignedToUser($deliveryId, $deliveryUserId, $database)
+            ) {
+                $database->rollBack();
+                http_response_code(404);
+                return ['error' => 'Assigned delivery not found'];
+            }
+
+            $orderStatus = match ($status) {
+                'picked_up', 'in_transit' => 'shipped',
+                'delivered' => 'delivered',
+                'failed' => 'delivery_failed',
+                default => 'processing',
+            };
+            $syncOrder = $database->prepare(
+                'UPDATE orders
+                 SET order_status = :order_status
+                 WHERE order_id = (
+                     SELECT order_id FROM deliveries WHERE delivery_id = :delivery_id
+                 )'
+            );
+            $syncOrder->execute([
+                'order_status' => $orderStatus,
+                'delivery_id' => $deliveryId,
+            ]);
+
+            self::recordAudit($deliveryUserId, $deliveryId, $status, $database);
+            $database->commit();
+
+            return ['success' => true];
+        } catch (Throwable $exception) {
+            if ($database->inTransaction()) {
+                $database->rollBack();
+            }
+            throw $exception;
         }
-
-        self::recordAudit($deliveryUserId, $deliveryId, $status);
-
-        return ['success' => true];
     }
 
-    private static function isAssignedToUser(int $deliveryId, int $deliveryUserId): bool
+    private static function isAssignedToUser(
+        int $deliveryId,
+        int $deliveryUserId,
+        ?PDO $database = null
+    ): bool
     {
-        $statement = getDbConnection()->prepare(
+        $statement = ($database ?? getDbConnection())->prepare(
             'SELECT 1
              FROM deliveries
              WHERE delivery_id = :delivery_id
@@ -148,28 +243,18 @@ class DeliveryController
     private static function recordAudit(
         int $deliveryUserId,
         int $deliveryId,
-        string $status
+        string $status,
+        ?PDO $database = null,
+        string $action = 'delivery.update'
     ): void {
-        $statement = getDbConnection()->prepare(
-            "INSERT INTO audit_logs (
-                user_id,
-                action_name,
-                table_name,
-                record_id,
-                details
-             ) VALUES (
-                :user_id,
-                'delivery.update',
-                'deliveries',
-                :delivery_id,
-                :details
-             )"
-        );
-        $statement->execute([
-            'user_id' => $deliveryUserId,
-            'delivery_id' => $deliveryId,
-            'details' => 'Updated assigned delivery #' . $deliveryId
+        AuditLogService::record(
+            $deliveryUserId,
+            $action,
+            'deliveries',
+            $deliveryId,
+            'Updated assigned delivery #' . $deliveryId
                 . ' to ' . str_replace('_', ' ', $status),
-        ]);
+            $database
+        );
     }
 }

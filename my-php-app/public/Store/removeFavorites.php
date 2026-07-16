@@ -1,11 +1,11 @@
 <?php
-session_start();
-require_once 'includes/db.php';
-$pdo = getDbConnection();
+require_once __DIR__ . '/../../src/middleware/authentication.php';
+require_once __DIR__ . '/includes/db.php';
+
+ensureSessionStarted();
 
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
+    redirectTo('login');
 }
 
 if (isset($_GET['id'])) {

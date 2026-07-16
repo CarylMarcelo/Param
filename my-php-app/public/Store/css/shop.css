@@ -2,6 +2,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: 30px;
   padding-bottom: 15px;
   border-bottom: 1px solid #eaeaea;
@@ -12,6 +14,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.filter-options {
+  flex: 1 1 560px;
+  flex-wrap: wrap;
 }
 
 .toolbar-label {
@@ -55,6 +62,42 @@
 
 .sort-dropdown:focus {
   border-color: var(--primary-maroon);
+}
+
+@media (max-width: 600px) {
+  .shop-controls {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .filter-options {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 9px;
+    padding-bottom: 5px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .filter-options .control-label,
+  .filter-pill {
+    flex: 0 0 auto;
+  }
+
+  .filter-pill {
+    padding: 6px 15px;
+  }
+
+  .sort-options {
+    width: 100%;
+  }
+
+  .sort-dropdown {
+    min-width: 0;
+    flex: 1;
+  }
 }
 
 /* The Modal Background Overlay */
@@ -143,10 +186,18 @@
   COLOR SWATCH STYLES
 ----------------------------------- */
 .color-swatch-label {
+  align-items: center;
   cursor: pointer;
+  display: inline-grid;
+  gap: 5px;
+  justify-items: center;
+  min-width: 54px;
 }
 .color-swatch-label input[type="radio"] {
-  display: none;
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
 }
 .color-swatch {
   display: block;
@@ -170,7 +221,16 @@
   cursor: pointer;
 }
 .size-box-label input[type="radio"] {
-  display: none;
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.color-swatch-label:focus-within .color-swatch,
+.size-box-label:focus-within .size-box {
+  outline: 3px solid rgba(97, 0, 0, 0.35);
+  outline-offset: 3px;
 }
 .size-box {
   display: flex;
@@ -194,6 +254,28 @@
   box-shadow:
     0 0 0 2px #fff inset,
     0 0 0 3px #2d2926;
+}
+
+.color-name {
+  color: #4d4d4d;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  max-width: 64px;
+  text-align: center;
+}
+
+.color-swatch-label input[type="radio"]:checked ~ .color-name {
+  color: var(--maroon);
+  font-weight: 800;
+}
+
+.size-box-label.is-unavailable {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.size-box-label.is-unavailable .size-box {
+  text-decoration: line-through;
 }
 
 /* -----------------------------------
@@ -232,4 +314,33 @@
   opacity: 1;
   filter: invert(16%) sepia(99%) saturate(7404%) hue-rotate(355deg)
     brightness(96%) contrast(113%);
+}
+.search-results-label {
+    margin: -24px 0 28px;
+    text-align: center;
+    color: #746b66;
+}
+
+.empty-search-results {
+    grid-column: 1 / -1;
+    padding: 48px 20px;
+    text-align: center;
+    border: 1px solid #e8dfd7;
+    border-radius: 10px;
+    background: #fff9ec;
+}
+
+.empty-search-results h3 {
+    margin: 0 0 8px;
+    color: #3e0703;
+}
+
+.empty-search-results p {
+    margin: 0 0 18px;
+    color: #746b66;
+}
+
+.empty-search-results a {
+    color: #3e0703;
+    font-weight: 700;
 }

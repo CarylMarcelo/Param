@@ -44,5 +44,14 @@ if ($resource === 'deliveries' && $requestMethod === 'PUT' && $deliveryId) {
     exit;
 }
 
+if ($resource === 'deliveries' && $requestMethod === 'POST' && $deliveryId) {
+    requirePermission($currentUser, 'deliveries.update_status');
+    echo json_encode(DeliveryController::claim(
+        $deliveryId,
+        (int) $currentUser['user_id']
+    ));
+    exit;
+}
+
 http_response_code(404);
 echo json_encode(['error' => 'Unknown resource']);

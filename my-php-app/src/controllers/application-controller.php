@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/admin-user-controller.php';
+require_once __DIR__ . '/../services/audit-log-service.php';
 
 class ApplicationController
 {
@@ -60,7 +62,7 @@ class ApplicationController
 
         if ($newStatus === 'approved') {
             $applicant = self::getApplicantAccountDetails($database, $applicationId);
-            $accountSetup = AdminController::createUser([
+            $accountSetup = AdminUserController::create([
                 'name' => $applicant['name'],
                 'email' => $applicant['email'],
                 'role' => $applicant['role'],
@@ -150,25 +152,13 @@ class ApplicationController
         string $status,
         string $applicantEmail
     ): void {
-        $statement = $database->prepare(
-            "INSERT INTO audit_logs (
-                user_id,
-                action_name,
-                table_name,
-                record_id,
-                details
-             ) VALUES (
-                :administrator_id,
-                'application.review',
-                'staff_applications',
-                :application_id,
-                :details
-             )"
+        AuditLogService::record(
+            $administratorId,
+            'application.review',
+            'staff_applications',
+            $applicationId,
+            ucfirst($status) . ' staff application: ' . $applicantEmail,
+            $database
         );
-        $statement->execute([
-            'administrator_id' => $administratorId,
-            'application_id' => $applicationId,
-            'details' => ucfirst($status) . ' staff application: ' . $applicantEmail,
-        ]);
     }
 }

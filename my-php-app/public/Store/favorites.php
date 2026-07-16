@@ -1,17 +1,8 @@
 <?php
-session_start();
-require_once 'includes/db.php';
+require_once __DIR__ . '/../../src/middleware/authentication.php';
+require_once __DIR__ . '/includes/db.php';
 
-// --- TEMPORARY BYPASS FOR TESTING ---
-// Act as the dummy Customer (ID: 999)
-$_SESSION['user_id'] = 999;
-
-/* Commented out until the login system is ready
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
-*/
+$customer = requireLoginOrRedirect();
 
 $stmt = $pdo->prepare("
     SELECT p.product_id, p.product_name, p.image_path, MIN(v.price) as display_price 
@@ -32,7 +23,7 @@ $favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Param. | Your Favorites</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=<?= (int) filemtime(__DIR__ . '/css/style.css') ?>">
     <link rel="stylesheet" href="css/favorites.css">
 </head>
 
@@ -53,7 +44,7 @@ $favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <?php else: ?>
                         <?php foreach ($favorites as $item): ?>
                             <div class="product-card">
-                                <img src="<?php echo htmlspecialchars($item['image_path']); ?>"
+                                <img src="<?= htmlspecialchars(appUrl($item['image_path'])) ?>"
                                     alt="<?php echo htmlspecialchars($item['product_name']); ?>" class="product-image">
                                 <div class="product-info">
                                     <h3 class="product-title"><?php echo htmlspecialchars($item['product_name']); ?></h3>

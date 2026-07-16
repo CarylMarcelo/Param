@@ -1,83 +1,71 @@
 <?php
-$path = isset($path) ? $path : '';
-$current_page = basename($_SERVER['PHP_SELF']);
+require_once dirname(__DIR__, 3) . '/src/config/app.php';
 
-// --- FETCH CART & FAVORITES COUNT ---
-$cart_count = 0;
-$fav_count = 0;
+$currentPage = basename($_SERVER['PHP_SELF']);
+$cartCount = 0;
+$favoriteCount = 0;
 
-if (isset($_SESSION['user_id']) && isset($pdo)) {
-    $user_id = $_SESSION['user_id'];
+if (isset($_SESSION['user_id'], $pdo)) {
+    $userId = (int) $_SESSION['user_id'];
 
-    // 1. Get total quantity of items in the active cart
     try {
-        $cart_stmt = $pdo->prepare("
-            SELECT SUM(quantity) 
-            FROM cart_items ci 
-            JOIN carts c ON ci.cart_id = c.cart_id 
-            WHERE c.user_id = ? AND c.status = 'active'
-        ");
-        $cart_stmt->execute([$user_id]);
-        $cart_count = $cart_stmt->fetchColumn() ?: 0;
-    } catch (PDOException $e) {
-        $cart_count = 0;
+        $cartStatement = $pdo->prepare(
+            "SELECT COALESCE(SUM(cart_items.quantity), 0)
+             FROM cart_items
+             JOIN carts ON carts.cart_id = cart_items.cart_id
+             WHERE carts.user_id = :user_id
+               AND carts.status = 'active'"
+        );
+        $cartStatement->execute(['user_id' => $userId]);
+        $cartCount = (int) $cartStatement->fetchColumn();
+    } catch (PDOException) {
+        $cartCount = 0;
     }
 
-    // 2. Get total number of favorites
     try {
-        $fav_stmt = $pdo->prepare("SELECT COUNT(*) FROM favorites WHERE user_id = ?");
-        $fav_stmt->execute([$user_id]);
-        $fav_count = $fav_stmt->fetchColumn() ?: 0;
-    } catch (PDOException $e) {
-        $fav_count = 0;
+        $favoriteStatement = $pdo->prepare(
+            'SELECT COUNT(*) FROM favorites WHERE user_id = :user_id'
+        );
+        $favoriteStatement->execute(['user_id' => $userId]);
+        $favoriteCount = (int) $favoriteStatement->fetchColumn();
+    } catch (PDOException) {
+        $favoriteCount = 0;
     }
 }
 ?>
-
 <header class="navbar">
     <div class="logo">
-        <img src="<?php echo $path; ?>images/logo-header.png" alt="Param. Logo" class="img-logo">
+        <a href="<?= htmlspecialchars(appUrl('store')) ?>" aria-label="PARAM storefront home">
+            <img src="<?= htmlspecialchars(appUrl('store/images/logo-header.png')) ?>" alt="PARAM Store" class="img-logo">
+        </a>
     </div>
-    <nav class="nav-links">
-        <a href="<?php echo $path; ?>../landing.php" <?php if ($current_page == 'landing.php')
-               echo 'class="active-link"'; ?>>Home</a>
-        <a href="<?php echo $path; ?>shop.php" <?php if ($current_page == 'shop.php')
-               echo 'class="active-link"'; ?>>Shop</a>
-        <a href="<?php echo $path; ?>AboutUs.php" <?php if ($current_page == 'AboutUs.php')
-               echo 'class="active-link"'; ?>>About Us</a>
-        <a href="<?php echo $path; ?>ContactUs.php" <?php if ($current_page == 'ContactUs.php')
-               echo 'class="active-link"'; ?>>Contact Us</a>
+
+    <nav class="nav-links" id="store-navigation" aria-label="Storefront navigation">
+        <a href="<?= htmlspecialchars(appUrl('store/shop.php')) ?>" <?= $currentPage === 'shop.php' ? 'class="active-link"' : '' ?>>Shop</a>
+        <a href="<?= htmlspecialchars(appUrl('store/AboutUs.php')) ?>" <?= $currentPage === 'AboutUs.php' ? 'class="active-link"' : '' ?>>About</a>
+        <a href="<?= htmlspecialchars(appUrl('store/ContactUs.php')) ?>" <?= $currentPage === 'ContactUs.php' ? 'class="active-link"' : '' ?>>Contact</a>
+        <a href="<?= htmlspecialchars(appUrl()) ?>">Main Site</a>
     </nav>
+
     <div class="nav-icons">
-        <!-- Search Icon -->
-        <a href="#" title="Search" id="open-search">
-            <img src="<?php echo $path; ?>images/search.png" alt="Search" class="custom-icon">
+        <a href="#" title="Search" id="open-search" aria-label="Search products">
+            <img src="<?= htmlspecialchars(appUrl('store/images/search.png')) ?>" alt="" class="custom-icon">
         </a>
 
-        <!-- Favorites Icon -->
-        <a href="<?php echo $path; ?>favorites.php" title="Favorites"
-            class="icon-wrapper <?php if ($current_page == 'favorites.php')
-                echo 'active-icon'; ?>">
-            <img src="<?php echo $path; ?>images/heart.png" alt="Favorites" class="custom-icon">
-            <?php if ($fav_count > 0): ?>
-                <span class="nav-badge"><?php echo $fav_count; ?></span>
-            <?php endif; ?>
+        <a href="<?= htmlspecialchars(appUrl('store/favorites.php')) ?>" title="Favorites" aria-label="Favorites<?= $favoriteCount ? ' (' . $favoriteCount . ')' : '' ?>" class="icon-wrapper nav-fav-button <?= $currentPage === 'favorites.php' ? 'active-icon' : '' ?>">
+            <img src="<?= htmlspecialchars(appUrl('store/images/heart.png')) ?>" alt="" class="custom-icon heart-icon">
+            <?php if ($favoriteCount > 0): ?><span class="nav-badge"><?= $favoriteCount ?></span><?php endif; ?>
         </a>
 
-        <!-- Cart Icon -->
-        <a href="<?php echo $path; ?>cart.php" title="Cart"
-            class="icon-wrapper cart-link <?php if ($current_page == 'cart.php')
-                echo 'active-icon'; ?>">
-            <img src="<?php echo $path; ?>images/shopping-cart.png" alt="Cart" class="custom-icon">
-            <?php if ($cart_count > 0): ?>
-                <span class="nav-badge"><?php echo $cart_count; ?></span>
-            <?php endif; ?>
+        <a href="<?= htmlspecialchars(appUrl('store/cart.php')) ?>" title="Cart" aria-label="Cart<?= $cartCount ? ' (' . $cartCount . ')' : '' ?>" class="icon-wrapper cart-link <?= $currentPage === 'cart.php' ? 'active-icon' : '' ?>">
+            <img src="<?= htmlspecialchars(appUrl('store/images/shopping-cart.png')) ?>" alt="" class="custom-icon">
+            <?php if ($cartCount > 0): ?><span class="nav-badge"><?= $cartCount ?></span><?php endif; ?>
         </a>
 
-        <!-- Profile Icon -->
-        <a href="<?php echo $path; ?>Profile.php" title="Profile" <?php if ($current_page == 'Profile.php')
-               echo 'class="active-icon"'; ?>>
-            <img src="<?php echo $path; ?>images/user.png" alt="Profile" class="custom-icon">
+        <a href="<?= htmlspecialchars(appUrl('store/Profile.php')) ?>" title="Profile" aria-label="Customer profile" class="<?= $currentPage === 'Profile.php' ? 'active-icon' : '' ?>">
+            <img src="<?= htmlspecialchars(appUrl('store/images/user.png')) ?>" alt="" class="custom-icon">
         </a>
+
+        <button class="menu-button" type="button" aria-label="Toggle storefront navigation" aria-controls="store-navigation" aria-expanded="false">&#9776;</button>
     </div>
 </header>

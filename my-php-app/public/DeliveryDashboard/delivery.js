@@ -1,5 +1,6 @@
 (function () {
-  var API = "../delivery-api.php";
+  var baseUrl = document.querySelector('meta[name="app-base-url"]').content;
+  var API = baseUrl + "/delivery-api";
   var token = document.querySelector('meta[name="csrf-token"]').content;
   var notice = document.getElementById("notice");
   var list = document.getElementById("deliveryList");
@@ -33,7 +34,7 @@
     }
     return fetch(url, config).then(function (r) {
       if (r.status === 401) {
-        location = "../login.php";
+        location = baseUrl + "/login";
         throw new Error("Not authenticated");
       }
       return r.json().then(function (d) {
@@ -75,11 +76,25 @@
     api("deliveries").then(function (rows) {
       if (!rows.length) {
         list.innerHTML =
-          '<div class="empty-state">No deliveries are currently assigned to you.</div>';
+          '<div class="empty-state">There are no assigned or available deliveries right now.</div>';
         return;
       }
       list.innerHTML = rows
         .map(function (d) {
+          var isAvailable = !d.assigned_to_user_id;
+          var action = isAvailable
+            ? '<div class="claim-panel"><span>Available delivery</span><button class="claim-button" type="button" data-id="' +
+              d.delivery_id +
+              '">Claim Delivery</button></div>'
+            : '<form class="delivery-form" data-id="' +
+              d.delivery_id +
+              '"><label>Status<select name="status">' +
+              options(d.delivery_status) +
+              '</select></label><label>Delivery notes<textarea name="notes">' +
+              safe(d.delivery_notes) +
+              '</textarea></label><label>Proof image path<input name="proof" value="' +
+              safe(d.proof_image_path) +
+              '" placeholder="e.g. uploads/proof-123.jpg"></label><button type="submit">Save Update</button></form>';
           return (
             '<article class="delivery-card"><h3>Delivery #' +
             d.delivery_id +
@@ -92,16 +107,10 @@
             "</p><p><strong>Address:</strong> " +
             safe(d.delivery_address_snapshot) +
             "</p><p><strong>Assigned:</strong> " +
-            safe(d.assigned_at || "Not recorded") +
-            '</p></div><form class="delivery-form" data-id="' +
-            d.delivery_id +
-            '"><label>Status<select name="status">' +
-            options(d.delivery_status) +
-            '</select></label><label>Delivery notes<textarea name="notes">' +
-            safe(d.delivery_notes) +
-            '</textarea></label><label>Proof image path<input name="proof" value="' +
-            safe(d.proof_image_path) +
-            '" placeholder="e.g. uploads/proof-123.jpg"></label><button type="submit">Save Update</button></form></article>'
+            safe(d.assigned_at || "Waiting to be claimed") +
+            "</p></div>" +
+            action +
+            "</article>"
           );
         })
         .join("");
@@ -127,6 +136,20 @@
       })
       .catch(function (err) {
         show(err.message);
+      });
+  });
+  list.addEventListener("click", function (e) {
+    if (!e.target.classList.contains("claim-button")) return;
+    e.target.disabled = true;
+    api("deliveries", { method: "POST", id: e.target.dataset.id })
+      .then(function () {
+        show("Delivery claimed and added to your assignments.");
+        loadSummary();
+        loadDeliveries();
+      })
+      .catch(function (err) {
+        show(err.message);
+        loadDeliveries();
       });
   });
   document.querySelectorAll('a[href^="#"]').forEach(function (a) {

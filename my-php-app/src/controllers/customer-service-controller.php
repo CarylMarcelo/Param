@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../services/audit-log-service.php';
 
 class CustomerServiceController
 {
@@ -78,7 +79,7 @@ class CustomerServiceController
             return ['error' => 'Concern not found'];
         }
 
-        self::recordAudit(
+        AuditLogService::record(
             $staffUserId,
             'support.reply',
             'support_concerns',
@@ -142,7 +143,7 @@ class CustomerServiceController
         ]);
 
         $refundRequestId = (int) $database->lastInsertId();
-        self::recordAudit(
+        AuditLogService::record(
             $staffUserId,
             'refund.request',
             'refund_requests',
@@ -183,34 +184,4 @@ class CustomerServiceController
         return (int) $statement->fetchColumn();
     }
 
-    private static function recordAudit(
-        int $userId,
-        string $action,
-        string $tableName,
-        int $recordId,
-        string $details
-    ): void {
-        $statement = getDbConnection()->prepare(
-            'INSERT INTO audit_logs (
-                user_id,
-                action_name,
-                table_name,
-                record_id,
-                details
-             ) VALUES (
-                :user_id,
-                :action,
-                :table_name,
-                :record_id,
-                :details
-             )'
-        );
-        $statement->execute([
-            'user_id' => $userId,
-            'action' => $action,
-            'table_name' => $tableName,
-            'record_id' => $recordId,
-            'details' => $details,
-        ]);
-    }
 }

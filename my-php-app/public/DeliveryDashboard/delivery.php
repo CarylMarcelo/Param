@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../src/middleware/authentication.php';
 require_once __DIR__ . '/../../src/middleware/rbacmiddleware.php';
 
-$currentUser = requireLoginOrRedirect('../login.php');
+$currentUser = requireLoginOrRedirect();
 requirePermission($currentUser, 'deliveries.view_assigned');
 
 $csrfToken = csrfToken();
@@ -20,27 +20,26 @@ $currentUserName = trim(
         name="csrf-token"
         content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>"
     >
-    <title>PARAM | Delivery Dashboard</title>
-    <link rel="stylesheet" href="../AdminDashboard/admin.css">
-    <link rel="stylesheet" href="../staff-dashboard.css">
-    <link rel="stylesheet" href="delivery.css">
+    <meta name="app-base-url" content="<?= htmlspecialchars(rtrim(appUrl(), '/'), ENT_QUOTES, 'UTF-8') ?>">
+    <title>Param Delivery Dashboard</title>
+    <link rel="stylesheet" href="<?= htmlspecialchars(appUrl('AdminDashboard/admin.css') . '?v=' . filemtime(__DIR__ . '/../AdminDashboard/admin.css'), ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="stylesheet" href="<?= htmlspecialchars(appUrl('DeliveryDashboard/delivery.css') . '?v=' . filemtime(__DIR__ . '/delivery.css'), ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body>
     <header class="site-header">
-        <a class="brand" href="delivery.php">
-            <img src="../images/logo-header.png" alt="Param logo">
+        <a class="brand" href="<?= htmlspecialchars(appUrl('delivery'), ENT_QUOTES, 'UTF-8') ?>">
+            <img src="<?= htmlspecialchars(appUrl('images/logo-header.png'), ENT_QUOTES, 'UTF-8') ?>" alt="Param logo">
         </a>
 
         <nav class="top-nav" aria-label="Main navigation">
-            <a href="#deliveries">My Deliveries</a>
-            <a href="../logout.php">Logout</a>
+            <a href="#deliveries">Delivery Queue</a>
+            <a href="<?= htmlspecialchars(appUrl('logout'), ENT_QUOTES, 'UTF-8') ?>">Logout</a>
         </nav>
     </header>
 
     <main class="seller-layout">
         <aside class="sidebar">
             <div class="sidebar-heading">
-                <p>Staff workspace</p>
                 <h1>Delivery Dashboard</h1>
             </div>
 
@@ -55,8 +54,8 @@ $currentUserName = trim(
 
             <nav class="side-nav" aria-label="Delivery navigation">
                 <a href="#dashboard">Dashboard</a>
-                <a href="#deliveries">Assigned Deliveries</a>
-                <a href="../logout.php">Logout</a>
+                <a href="#deliveries">Delivery Queue</a>
+                <a href="<?= htmlspecialchars(appUrl('logout'), ENT_QUOTES, 'UTF-8') ?>">Logout</a>
             </nav>
         </aside>
 
@@ -72,12 +71,11 @@ $currentUserName = trim(
                 <div class="section-title">
                     <p>Param Delivery</p>
                     <h2>My Assignment Summary</h2>
-                    <p class="section-description">See your assigned workload and current delivery outcomes at a glance.</p>
                 </div>
 
                 <div class="summary-grid">
                     <article class="summary-card">
-                        <span>Total Assigned</span>
+                        <span>My + Available</span>
                         <strong id="total">0</strong>
                     </article>
 
@@ -100,9 +98,8 @@ $currentUserName = trim(
 
             <section id="deliveries" class="page-section">
                 <div class="section-title">
-                    <p>Assigned Only</p>
-                    <h2>Delivery Tasks</h2>
-                    <p class="section-description">Update the status, notes, and proof path for deliveries assigned to your account.</p>
+                    <p>Claim available work</p>
+                    <h2>Delivery Queue</h2>
                 </div>
 
                 <div id="deliveryList" class="delivery-list"></div>
@@ -111,7 +108,7 @@ $currentUserName = trim(
     </main>
 
     <footer class="site-footer">
-        <img src="../images/logo-footer.png" alt="Param group logo">
+        <img src="<?= htmlspecialchars(appUrl('images/logo-footer.png'), ENT_QUOTES, 'UTF-8') ?>" alt="Param group logo">
         <p>
             <strong>Disclaimer:</strong>
             This website is for educational purposes only and is a requirement
@@ -119,6 +116,6 @@ $currentUserName = trim(
         </p>
     </footer>
 
-    <script src="delivery.js"></script>
+    <script src="<?= htmlspecialchars(appUrl('DeliveryDashboard/delivery.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
 </body>
 </html>

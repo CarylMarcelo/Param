@@ -1,4 +1,4 @@
-USE param_db;
+-- Select the target database in phpMyAdmin before importing this migration.
 
 UPDATE permissions
 SET description = 'Manage own account'

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../models/user.php';
+require_once __DIR__ . '/../config/app.php';
 
 // Starts the session (if needed) and exposes helpers used by pages/api.php.
 
@@ -45,11 +46,11 @@ function currentUser(): ?array
 }
 
 // For page requests (admin.php): send them to login.php if not authenticated.
-function requireLoginOrRedirect(string $loginUrl = '/login.php'): array
+function requireLoginOrRedirect(?string $loginUrl = null): array
 {
     $user = currentUser();
     if (!$user || $user['status'] !== 'active') {
-        header('Location: ' . $loginUrl);
+        header('Location: ' . ($loginUrl ?? appUrl('login')));
         exit;
     }
     return $user;

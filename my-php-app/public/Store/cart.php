@@ -1,20 +1,9 @@
 <?php
-session_start();
-require_once 'includes/db.php';
-$pdo = getDbConnection();
+require_once __DIR__ . '/../../src/middleware/authentication.php';
+require_once __DIR__ . '/includes/db.php';
 
-// --- TEMPORARY BYPASS FOR TESTING ---
-// Force the session to always act like User #1 is logged in
-$_SESSION['user_id'] = 999;
-
-/* Commented out until the login system is ready
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
-*/
-
-$user_id = $_SESSION['user_id'];
+$customer = requireLoginOrRedirect();
+$user_id = (int) $customer['user_id'];
 
 $query = "SELECT ci.cart_item_id, ci.quantity, v.size, v.color, v.price, p.product_name, p.image_path 
           FROM cart_items ci
@@ -42,7 +31,7 @@ foreach ($cart_items as $item) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Param. | Your Shopping Cart</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=<?= (int) filemtime(__DIR__ . '/css/style.css') ?>">
     <link rel="stylesheet" href="css/cart.css">
 </head>
 
@@ -65,7 +54,7 @@ foreach ($cart_items as $item) {
                     <?php else: ?>
                         <?php foreach ($cart_items as $item): ?>
                             <div class="cart-item">
-                                <img src="<?php echo htmlspecialchars($item['image_path']); ?>"
+                                <img src="<?= htmlspecialchars(appUrl($item['image_path'])) ?>"
                                     alt="<?php echo htmlspecialchars($item['product_name']); ?>" class="cart-item-img">
                                 <div class="cart-item-details">
                                     <div class="cart-item-header">
@@ -88,7 +77,7 @@ foreach ($cart_items as $item) {
                                             <button type="button" class="btn-qty-plus">+</button>
                                         </div>
 
-                                        <a href="RemoveFromCart.php?id=<?php echo $item['cart_item_id']; ?>" class="btn-remove"
+                                        <a href="removeFromCart.php?id=<?php echo $item['cart_item_id']; ?>" class="btn-remove"
                                             style="text-decoration: none;">Remove</a>
                                     </div>
                                 </div>
@@ -184,7 +173,7 @@ foreach ($cart_items as $item) {
 
                     } else if (currentValue === 1) {
                         let cartItemId = input.id.split('_')[1];
-                        window.location.href = 'RemoveFromCart.php?id=' + cartItemId;
+                        window.location.href = 'removeFromCart.php?id=' + cartItemId;
                     }
                 });
             });

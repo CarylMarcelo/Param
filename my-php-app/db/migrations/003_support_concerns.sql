@@ -1,4 +1,4 @@
-USE param_db;
+-- Select the target database in phpMyAdmin before importing this migration.
 CREATE TABLE IF NOT EXISTS support_concerns (
     concern_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,

@@ -1,20 +1,9 @@
 <?php
-session_start();
-require_once 'includes/db.php';
+require_once __DIR__ . '/../../src/middleware/authentication.php';
+require_once __DIR__ . '/../../src/models/product.php';
+require_once __DIR__ . '/includes/db.php';
 
-// 1. THIS IS THE FIX: Get the database connection using the new function
-$pdo = getDbConnection();
-
-// --- TEMPORARY BYPASS FOR TESTING ---
-// Act as the dummy Customer (ID: 999)
-$_SESSION['user_id'] = 999;
-
-/* Commented out until the login system is ready
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
-*/
+ensureSessionStarted();
 
 // --- GET USER'S FAVORITED PRODUCTS ---
 $user_favorites = [];
@@ -24,33 +13,13 @@ if (isset($_SESSION['user_id'])) {
     $user_favorites = $fav_stmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
-$cat = isset($_GET['cat']) ? (int) $_GET['cat'] : 0;
-$sort = $_GET['sort'] ?? 'featured';
-
-$query = "SELECT p.product_id, p.product_name, p.image_path, MIN(v.price) as display_price 
-          FROM products p
-          LEFT JOIN product_variants v ON p.product_id = v.product_id
-          WHERE p.status = 'active'";
-
-if ($cat > 0) {
-    $query .= " AND p.category_id = :cat";
-}
-
-$query .= " GROUP BY p.product_id";
-
-if ($sort == 'price_asc')
-    $query .= " ORDER BY display_price ASC";
-if ($sort == 'price_desc')
-    $query .= " ORDER BY display_price DESC";
-
-$stmt = $pdo->prepare($query);
-
-if ($cat > 0) {
-    $stmt->bindParam(':cat', $cat, PDO::PARAM_INT);
-}
-
-$stmt->execute();
-$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$cat = isset($_GET['cat']) ? max(0, (int) $_GET['cat']) : 0;
+$requestedSort = (string) ($_GET['sort'] ?? 'featured');
+$sort = in_array($requestedSort, ['featured', 'price_asc', 'price_desc'], true) ? $requestedSort : 'featured';
+$searchTerm = trim((string) ($_GET['query'] ?? ''));
+$searchTerm = substr($searchTerm, 0, 100);
+$products = Product::catalog($cat, $sort, $pdo, $searchTerm);
+$categories = Product::categories($pdo);
 ?>
 
 <!DOCTYPE html>
@@ -60,8 +29,8 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Param. | Ultimate Fashion Destination</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/shop.css">
+    <link rel="stylesheet" href="css/style.css?v=<?= (int) filemtime(__DIR__ . '/css/style.css') ?>">
+    <link rel="stylesheet" href="css/shop.css?v=<?= (int) filemtime(__DIR__ . '/css/shop.css') ?>">
 </head>
 
 <body>
@@ -74,28 +43,32 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <section class="product-section">
             <h2 class="section-title">Our Products</h2>
+            <?php if ($searchTerm !== ''): ?>
+                <p class="search-results-label">
+                    <?= count($products) ?> result<?= count($products) === 1 ? '' : 's' ?> for
+                    <strong>&ldquo;<?= htmlspecialchars($searchTerm) ?>&rdquo;</strong>
+                </p>
+            <?php endif; ?>
 
             <div class="shop-controls">
                 <div class="filter-options">
                     <span class="control-label">Filter:</span>
                     <?php
-                    $cats = ['All' => 0, 'Kids' => 1, 'Women' => 2, 'Men' => 3, 'Unisex' => 4];
-
                     $active_cat = isset($_GET['cat']) ? (int) $_GET['cat'] : 0;
                     ?>
 
-                    <?php foreach ($cats as $name => $id): ?>
-                        <a href="?cat=<?php echo $id; ?>"
-                            class="filter-pill <?php echo ($active_cat == $id) ? 'active' : ''; ?>">
-                            <?php echo $name; ?>
+                    <a href="?<?= htmlspecialchars(http_build_query(['cat' => 0, 'sort' => $sort, 'query' => $searchTerm])) ?>" class="filter-pill <?= $active_cat === 0 ? 'active' : '' ?>">All</a>
+                    <?php foreach ($categories as $category): ?>
+                        <a href="?<?= htmlspecialchars(http_build_query(['cat' => (int) $category['category_id'], 'sort' => $sort, 'query' => $searchTerm])) ?>"
+                            class="filter-pill <?= $active_cat === (int) $category['category_id'] ? 'active' : '' ?>">
+                            <?= htmlspecialchars($category['category_name']) ?>
                         </a>
                     <?php endforeach; ?>
                 </div>
 
                 <div class="sort-options">
                     <span class="control-label">Sort:</span>
-                    <select class="sort-dropdown"
-                        onchange="window.location.href='?cat=<?php echo $_GET['cat'] ?? 0; ?>&sort='+this.value">
+                    <select class="sort-dropdown" id="product-sort">
                         <option value="featured">Featured</option>
                         <option value="price_asc" <?php echo (isset($_GET['sort']) && $_GET['sort'] == 'price_asc') ? 'selected' : ''; ?>>Price: Low to High</option>
                         <option value="price_desc" <?php echo (isset($_GET['sort']) && $_GET['sort'] == 'price_desc') ? 'selected' : ''; ?>>Price: High to Low</option>
@@ -104,7 +77,13 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
 
             <div class="product-grid">
-
+                <?php if (empty($products)): ?>
+                    <div class="empty-search-results">
+                        <h3>No matching products</h3>
+                        <p>Try another product name or category.</p>
+                        <a href="shop.php">View all products</a>
+                    </div>
+                <?php endif; ?>
                 <?php foreach ($products as $item): ?>
                     <?php
                     $is_faved = in_array($item['product_id'], $user_favorites);
@@ -112,7 +91,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     <div class="product-card">
                         <div class="product-image-container">
-                            <img src="<?php echo htmlspecialchars($item['image_path']); ?>"
+                            <img src="<?= htmlspecialchars(appUrl($item['image_path'])) ?>"
                                 alt="<?php echo htmlspecialchars($item['product_name']); ?>" class="product-image">
 
                             <button class="btn-favorite-card <?php echo $is_faved ? 'is-favorited' : ''; ?>"
@@ -149,6 +128,13 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <script>
+        document.getElementById('product-sort')?.addEventListener('change', function () {
+            const params = new URLSearchParams(window.location.search);
+            params.set('cat', <?= json_encode((string) $cat) ?>);
+            params.set('sort', this.value);
+            window.location.href = 'shop.php?' + params.toString();
+        });
+
         document.querySelectorAll('.btn-favorite-card').forEach(button => {
             button.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -190,6 +176,8 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         badge.remove();
                                     }
                                 }
+
+                                // Header icon remains the black heart for consistent navbar styling.
                             }
 
                             if (heartIcon) {
@@ -198,7 +186,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             }
 
                         } else if (data.status === 'error' && data.message === 'not_logged_in') {
-                            window.location.href = 'login.php';
+                            window.location.href = <?= json_encode(appUrl('login')) ?>;
                         }
                     })
                     .catch(error => console.error('Error:', error));
@@ -220,6 +208,7 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         .then(html => {
                             document.getElementById('modalBody').innerHTML = html;
                             modal.style.display = 'block';
+                            initializeProductForm();
                         });
                 });
             });
@@ -235,5 +224,54 @@ $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     modal.style.display = 'none';
                 }
             });
+
+            function initializeProductForm() {
+                const form = document.getElementById('product-order-form');
+                if (!form) return;
+
+                let variants = [];
+                try {
+                    variants = JSON.parse(form.dataset.variants || '[]');
+                } catch (error) {
+                    console.error('Invalid product variant data.', error);
+                }
+
+                const colorInputs = Array.from(form.querySelectorAll('input[name="color"]'));
+                const sizeInputs = Array.from(form.querySelectorAll('input[name="size"]'));
+                const colorDisplay = form.querySelector('[data-display-color]');
+                const sizeDisplay = form.querySelector('[data-display-size]');
+
+                function syncSizes() {
+                    const selectedColor = form.querySelector('input[name="color"]:checked')?.value || '';
+                    const availableSizes = new Set(
+                        variants.filter(variant => variant.color === selectedColor).map(variant => variant.size)
+                    );
+
+                    sizeInputs.forEach(input => {
+                        const available = availableSizes.has(input.value);
+                        input.disabled = !available;
+                        input.closest('.size-box-label')?.classList.toggle('is-unavailable', !available);
+                    });
+
+                    let selectedSize = form.querySelector('input[name="size"]:checked:not(:disabled)');
+                    if (!selectedSize) {
+                        selectedSize = sizeInputs.find(input => !input.disabled) || null;
+                        if (selectedSize) selectedSize.checked = true;
+                    }
+
+                    if (colorDisplay) colorDisplay.textContent = selectedColor.toUpperCase();
+                    if (sizeDisplay) {
+                        sizeDisplay.textContent = selectedSize
+                            ? selectedSize.nextElementSibling.textContent.toUpperCase()
+                            : 'UNAVAILABLE';
+                    }
+                }
+
+                colorInputs.forEach(input => input.addEventListener('change', syncSizes));
+                sizeInputs.forEach(input => input.addEventListener('change', function () {
+                    if (sizeDisplay) sizeDisplay.textContent = this.nextElementSibling.textContent.toUpperCase();
+                }));
+                syncSizes();
+            }
         });
     </script>

@@ -1,202 +1,74 @@
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-layout {
+  width: 100%;
+  flex: 1 0 auto;
+}
+
+.site-footer {
+  margin-top: auto;
+}
+
 .support-list {
   display: grid;
-  gap: 20px;
-}
-
-button,
-button:hover,
-button:focus-visible,
-button:active {
-  animation: none;
-  transform: none;
-}
-
-button {
-  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
-}
-
-.summary-grid {
   gap: 18px;
 }
-
-.summary-card {
-  --stat-accent: var(--maroon);
-  display: flex;
-  min-height: 154px;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-  padding: 24px;
-  background: linear-gradient(145deg, #ffffff 0%, #fffaf2 100%);
-  border: 1px solid #eadfce;
-  border-radius: 14px;
-  box-shadow: 0 10px 26px rgba(62, 7, 3, 0.07);
-}
-
-.summary-grid .summary-card {
-  border-top: 1px solid #eadfce;
-}
-
-.summary-card:nth-child(2) {
-  --stat-accent: #c07b08;
-}
-
-.summary-card:nth-child(3) {
-  --stat-accent: var(--success);
-}
-
-.summary-card:nth-child(4) {
-  --stat-accent: var(--danger);
-}
-
-.summary-card span {
-  color: #625b56;
-  font-size: 0.76rem;
-  font-weight: 750;
-  letter-spacing: 0.075em;
-  line-height: 1.25;
-  text-transform: uppercase;
-}
-
-.summary-card strong,
-.summary-card.warning strong {
-  color: var(--stat-accent);
-  font-family: "Inter", Arial, sans-serif;
-  font-size: clamp(2.55rem, 4vw, 3.35rem);
-  font-feature-settings: "lnum" 1, "tnum" 1;
-  font-variant-numeric: lining-nums tabular-nums;
-  font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 0.95;
-  overflow-wrap: normal;
-  transform: none;
-}
-
 .support-card {
-  overflow: hidden;
-  padding: 24px;
-  background: var(--panel);
+  background: #fff;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 8px 22px rgba(62, 7, 3, 0.06);
+  border-radius: 8px;
+  padding: 20px;
 }
-
 .support-card h3 {
-  margin: 0 0 10px;
   color: var(--maroon);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.25rem;
+  margin: 0 0 10px;
 }
-
-.support-card > p {
-  margin: 16px 0;
-  color: #4f4945;
-  line-height: 1.7;
-}
-
 .support-meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin: 16px 0;
-  padding: 16px;
-  background: #fffaf0;
-  border: 1px solid #f0e2c6;
-  border-radius: 8px;
+  gap: 10px;
+  margin: 12px 0;
 }
-
 .support-meta p {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.84rem;
-  overflow-wrap: anywhere;
 }
-
-.support-meta strong {
-  color: var(--ink);
-}
-
 .support-form {
   display: grid;
   grid-template-columns: 180px minmax(260px, 1fr) auto;
   gap: 12px;
   align-items: end;
-  margin-top: 18px;
-  padding: 18px;
-  background: #f9f7f4;
-  border: 1px solid var(--line);
-  border-radius: 8px;
 }
-
 .refund-form {
+  border-top: 1px solid var(--line);
   display: grid;
   grid-template-columns: 1fr 1fr auto;
   gap: 12px;
-  align-items: end;
-  margin-top: 14px;
-  padding: 18px;
-  background: #fff7e2;
-  border: 1px solid #eedba8;
-  border-radius: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
 }
-
-.support-form label,
-.refund-form label {
-  color: var(--muted);
-  font-size: 0.8rem;
-  letter-spacing: 0.02em;
-}
-
 textarea {
-  width: 100%;
   border: 1px solid #d7cec8;
-  border-radius: 6px;
+  border-radius: 4px;
   font: inherit;
-  min-height: 82px;
-  padding: 10px;
-  resize: vertical;
+  min-height: 76px;
+  padding: 8px;
+  width: 100%;
 }
-
 .empty-state {
-  padding: 50px 24px;
-  color: var(--muted);
-  background: #fffaf0;
+  background: #fff;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
+  padding: 30px;
   text-align: center;
 }
-
-#refunds .table-wrap td:nth-child(4) {
-  color: var(--maroon);
-  font-weight: 700;
-  text-transform: capitalize;
-}
-
 @media (max-width: 900px) {
   .support-meta,
   .support-form,
   .refund-form {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 720px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .summary-card {
-    min-height: 138px;
-    padding: 20px;
-  }
-}
-
-@media (max-width: 520px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .support-card {
-    padding: 18px;
   }
 }

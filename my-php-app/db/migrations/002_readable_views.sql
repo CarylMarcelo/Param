@@ -1,4 +1,4 @@
-USE param_db;
+-- Select the target database in phpMyAdmin before importing this migration.
 
 CREATE OR REPLACE VIEW publicly_applicable_roles AS
 SELECT role_id, role_name, description FROM roles WHERE is_publicly_applicable = 1;

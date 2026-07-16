@@ -78,22 +78,22 @@ function saveNewPassword(array $setupToken, string $password): void
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>PARAM | Set Up Account</title>
-    <link rel="stylesheet" href="setup-account.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= htmlspecialchars(appUrl('setup-account.css') . '?v=' . filemtime(__DIR__ . '/setup-account.css'), ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body>
-    <main class="setup-page">
-        <a class="back-link" href="landing.php">&larr; Back to home</a>
+    <main class="setup-page container-fluid">
+        <a class="back-link" href="<?= htmlspecialchars(appUrl(), ENT_QUOTES, 'UTF-8') ?>">&larr; Back to home</a>
 
         <section class="setup-card" aria-labelledby="setup-title">
             <div class="brand-panel">
-                <img class="brand-logo" src="images/logo-header.png" alt="PARAM">
+                <img class="brand-logo" src="<?= htmlspecialchars(appUrl('images/logo-header.png'), ENT_QUOTES, 'UTF-8') ?>" alt="PARAM">
                 <p class="brand-label">PARAM Account Access</p>
                 <h1>Start securely</h1>
                 <p class="brand-copy">
                     Create the password you will use to access your assigned
                     PARAM account and workspace.
                 </p>
-
                 <ul class="security-list">
                     <li>Private account setup</li>
                     <li>One-time secure link</li>
@@ -110,7 +110,7 @@ function saveNewPassword(array $setupToken, string $password): void
                             Your account setup is complete. You can now sign in
                             using your email address and new password.
                         </p>
-                        <a class="primary-link" href="login.php">Continue to login</a>
+                        <a class="btn setup-button w-100" href="<?= htmlspecialchars(appUrl('login'), ENT_QUOTES, 'UTF-8') ?>">Continue to login</a>
                     </div>
                 <?php else: ?>
                     <p class="form-label-top">Account security</p>
@@ -121,56 +121,58 @@ function saveNewPassword(array $setupToken, string $password): void
                     </p>
 
                     <?php if ($errorMessage): ?>
-                        <p class="error-message" role="alert">
+                        <div class="alert alert-danger error-message" role="alert">
                             <?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?>
-                        </p>
+                        </div>
                     <?php endif; ?>
 
                     <?php if ($setupToken): ?>
                         <form class="setup-form" method="post">
-                            <input
-                                type="hidden"
-                                name="token"
-                                value="<?= htmlspecialchars($setupTokenValue, ENT_QUOTES, 'UTF-8') ?>"
-                            >
+                            <input type="hidden" name="token" value="<?= htmlspecialchars($setupTokenValue, ENT_QUOTES, 'UTF-8') ?>">
 
-                            <div class="field-group">
-                                <label for="password">New password</label>
-                                <input
-                                    id="password"
-                                    type="password"
-                                    name="password"
-                                    minlength="10"
-                                    autocomplete="new-password"
-                                    required
-                                >
+                            <div>
+                                <label class="form-label" for="password">New password</label>
+                                <div class="password-wrap">
+                                    <input class="form-control form-control-lg" id="password" type="password" name="password"
+                                           minlength="10" autocomplete="new-password" required>
+                                    <button class="password-toggle" type="button" aria-controls="password" aria-pressed="false">Show</button>
+                                </div>
                             </div>
 
-                            <div class="field-group">
-                                <label for="password-confirmation">Confirm password</label>
-                                <input
-                                    id="password-confirmation"
-                                    type="password"
-                                    name="password_confirmation"
-                                    minlength="10"
-                                    autocomplete="new-password"
-                                    required
-                                >
+                            <div>
+                                <label class="form-label" for="password-confirmation">Confirm password</label>
+                                <div class="password-wrap">
+                                    <input class="form-control form-control-lg" id="password-confirmation" type="password"
+                                           name="password_confirmation" minlength="10" autocomplete="new-password" required>
+                                    <button class="password-toggle" type="button" aria-controls="password-confirmation" aria-pressed="false">Show</button>
+                                </div>
                             </div>
 
-                            <button class="setup-button" type="submit">Save password</button>
+                            <button class="btn setup-button w-100" type="submit">Save password</button>
                         </form>
                     <?php else: ?>
-                        <a class="secondary-link" href="login.php">Return to login</a>
+                        <a class="btn setup-button setup-button-outline w-100" href="<?= htmlspecialchars(appUrl('login'), ENT_QUOTES, 'UTF-8') ?>">Return to login</a>
                     <?php endif; ?>
 
-                    <p class="setup-note">
-                        This setup link expires after 24 hours and can only be
-                        used once.
-                    </p>
+                    <p class="setup-note">This setup link expires after 24 hours and can only be used once.</p>
                 <?php endif; ?>
             </div>
         </section>
     </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.password-toggle').forEach(function (toggle) {
+                var targetId = toggle.getAttribute('aria-controls');
+                var input = document.getElementById(targetId);
+                if (!input) return;
+                toggle.addEventListener('click', function () {
+                    var isVisible = input.type === 'text';
+                    input.type = isVisible ? 'password' : 'text';
+                    toggle.textContent = isVisible ? 'Show' : 'Hide';
+                    toggle.setAttribute('aria-pressed', String(!isVisible));
+                });
+            });
+        });
+    </script>
 </body>
 </html>

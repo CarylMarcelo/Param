@@ -1,180 +1,236 @@
 <?php
-session_start();
-require_once 'includes/db.php';
+require_once __DIR__ . '/../../src/middleware/authentication.php';
+require_once __DIR__ . '/../../src/services/checkout-service.php';
 
-// --- TEMPORARY BYPASS FOR TESTING ---
-$_SESSION['user_id'] = 999;
-$user_id = $_SESSION['user_id'];
+$customer = requireLoginOrRedirect();
+ensureSessionStarted();
 
-// Check if a specific variant_id was passed (for "Buy Now")
-$variant_id = isset($_GET['variant_id']) ? (int) $_GET['variant_id'] : null;
+$userId = (int) $customer['user_id'];
+$variantId = (int) ($_GET['variant_id'] ?? $_POST['variant_id'] ?? 0);
+$variantId = $variantId > 0 ? $variantId : null;
+$details = CheckoutService::customerDetails($userId);
+$error = '';
 
-if ($variant_id) {
-    // FETCH ONLY THE SPECIFIC ITEM
-    $query = "SELECT 1 as quantity, v.size, v.color, v.price, p.product_name, p.image_path 
-              FROM product_variants v
-              JOIN products p ON v.product_id = p.product_id
-              WHERE v.variant_id = :variant_id";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute(['variant_id' => $variant_id]);
-} else {
-    // FETCH FULL CART (DEFAULT)
-    $query = "SELECT ci.quantity, v.size, v.color, v.price, p.product_name, p.image_path 
-              FROM cart_items ci
-              JOIN carts c ON ci.cart_id = c.cart_id
-              JOIN product_variants v ON ci.variant_id = v.variant_id
-              JOIN products p ON v.product_id = p.product_id
-              WHERE c.user_id = :user_id AND c.status = 'active'";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute(['user_id' => $user_id]);
+$values = [
+    'email' => (string) ($details['email'] ?? ''),
+    'phone' => (string) ($details['contact_number'] ?? ''),
+    'first_name' => (string) ($details['first_name'] ?? ''),
+    'last_name' => (string) ($details['last_name'] ?? ''),
+    'street_address' => trim(implode(' ', array_filter([
+        $details['house_no'] ?? '',
+        $details['street'] ?? '',
+    ]))),
+    'barangay' => (string) ($details['barangay_name'] ?? ''),
+    'city' => (string) ($details['locality_name'] ?? ''),
+    'province' => (string) ($details['province_name'] ?? ''),
+    'region' => (string) ($details['region_name'] ?? ''),
+    'postal_code' => (string) ($details['postal_code'] ?? ''),
+    'payment_method' => 'cod',
+    'delivery_address_id' => (int) ($details['address_id'] ?? 0),
+];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    foreach (array_keys($values) as $field) {
+        if (array_key_exists($field, $_POST)) {
+            $values[$field] = is_int($values[$field])
+                ? (int) $_POST[$field]
+                : trim((string) $_POST[$field]);
+        }
+    }
+
+    $nonce = (string) ($_POST['checkout_nonce'] ?? '');
+    $completedOrders = $_SESSION['completed_checkouts'] ?? [];
+    if ($nonce !== '' && isset($completedOrders[$nonce])) {
+        redirectTo('store/payment.php?order=' . (int) $completedOrders[$nonce], 303);
+    }
+
+    if (!hash_equals(csrfToken(), (string) ($_POST['csrf_token'] ?? ''))) {
+        $error = 'Your checkout session expired. Please refresh the page and try again.';
+    } elseif ($nonce === '' || !hash_equals((string) ($_SESSION['checkout_nonce'] ?? ''), $nonce)) {
+        $error = 'This checkout form has expired. Please refresh the page before placing your order.';
+    } else {
+        try {
+            $orderId = CheckoutService::placeOrder($userId, $values, $variantId);
+            $_SESSION['completed_checkouts'][$nonce] = $orderId;
+            if (count($_SESSION['completed_checkouts']) > 10) {
+                $_SESSION['completed_checkouts'] = array_slice($_SESSION['completed_checkouts'], -10, null, true);
+            }
+            unset($_SESSION['checkout_nonce']);
+            redirectTo('store/payment.php?order=' . $orderId, 303);
+        } catch (InvalidArgumentException|CheckoutException $exception) {
+            $error = $exception->getMessage();
+        } catch (Throwable) {
+            $error = 'We could not place your order right now. No payment was recorded. Please try again.';
+        }
+    }
 }
-$cart_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$subtotal = 0;
-foreach ($cart_items as $item) {
-    $subtotal += $item['price'] * $item['quantity'];
+if (empty($_SESSION['checkout_nonce'])) {
+    $_SESSION['checkout_nonce'] = bin2hex(random_bytes(24));
 }
 
-$shipping = 150.00;
-$total = $subtotal + $shipping;
+$items = CheckoutService::previewItems($userId, $variantId);
+$totals = CheckoutService::totals($items);
+$hasStockProblem = false;
+foreach ($items as $item) {
+    if ((int) $item['stock_quantity'] < (int) $item['quantity']) {
+        $hasStockProblem = true;
+        break;
+    }
+}
+
+function checkoutValue(array $values, string $key): string
+{
+    return htmlspecialchars((string) ($values[$key] ?? ''), ENT_QUOTES, 'UTF-8');
+}
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Param. | Checkout</title>
-
-    <link rel="stylesheet" href="css/style.css">
+    <title>Param. | Secure Checkout</title>
+    <link rel="stylesheet" href="css/style.css?v=<?= (int) filemtime(__DIR__ . '/css/style.css') ?>">
     <link rel="stylesheet" href="css/checkout.css">
 </head>
-
 <body>
-
     <main class="store-container">
-        <?php
-        $path = '';
-        include 'includes/header.php';
-        ?>
+        <?php $path = ''; include 'includes/header.php'; ?>
 
         <section class="checkout-section">
-            <h2 class="section-title">Checkout</h2>
+            <div class="checkout-heading">
+                <span class="checkout-eyebrow">Secure checkout</span>
+                <h1 class="section-title">Review and place your order</h1>
+                <div class="checkout-steps" aria-label="Checkout progress">
+                    <span class="complete">Cart</span><span class="active">Checkout</span><span>Confirmation</span>
+                </div>
+            </div>
 
-            <form action="payment.php" method="POST" id="checkout-form">
+            <?php if ($error !== ''): ?>
+                <div class="checkout-alert" role="alert"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+
+            <form method="POST" id="checkout-form">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrfToken()) ?>">
+                <input type="hidden" name="checkout_nonce" value="<?= htmlspecialchars($_SESSION['checkout_nonce']) ?>">
+                <input type="hidden" name="variant_id" value="<?= (int) ($variantId ?? 0) ?>">
+                <input type="hidden" name="delivery_address_id" value="<?= (int) $values['delivery_address_id'] ?>">
+                <input type="hidden" name="barangay" value="<?= checkoutValue($values, 'barangay') ?>">
+                <input type="hidden" name="province" value="<?= checkoutValue($values, 'province') ?>">
+                <input type="hidden" name="region" value="<?= checkoutValue($values, 'region') ?>">
+
                 <div class="checkout-layout">
-
                     <div class="checkout-form-area">
-                        <div class="form-section">
-                            <h3 class="form-title">Contact Information</h3>
-                            <div class="form-group">
-                                <label for="email">Email Address</label>
-                                <input type="email" id="email" name="email" class="form-input"
-                                    placeholder="Enter your email" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="phone">Phone Number</label>
-                                <input type="tel" id="phone" name="phone" class="form-input" placeholder="09XX XXX XXXX"
-                                    required>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h3 class="form-title">Shipping Address</h3>
+                        <section class="form-section">
+                            <div class="form-section-heading"><span>1</span><div><h2 class="form-title">Contact information</h2><p>We&rsquo;ll use this for order and delivery updates.</p></div></div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="fname">First Name</label>
-                                    <input type="text" id="fname" name="fname" class="form-input" required>
+                                    <label for="email">Email address</label>
+                                    <input type="email" id="email" name="email" class="form-input" value="<?= checkoutValue($values, 'email') ?>" autocomplete="email" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="lname">Last Name</label>
-                                    <input type="text" id="lname" name="lname" class="form-input" required>
+                                    <label for="phone">Contact number</label>
+                                    <input type="tel" id="phone" name="phone" class="form-input" value="<?= checkoutValue($values, 'phone') ?>" autocomplete="tel" placeholder="09123456789" required>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="form-section">
+                            <div class="form-section-heading"><span>2</span><div><h2 class="form-title">Delivery address</h2><p>Your normalized location comes from your saved profile. Update it from My Profile if you need a different city or barangay.</p></div></div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="first_name">First name</label>
+                                    <input type="text" id="first_name" name="first_name" class="form-input" value="<?= checkoutValue($values, 'first_name') ?>" autocomplete="given-name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="last_name">Last name</label>
+                                    <input type="text" id="last_name" name="last_name" class="form-input" value="<?= checkoutValue($values, 'last_name') ?>" autocomplete="family-name" required>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="address">Street Address</label>
-                                <input type="text" id="address" name="address" class="form-input"
-                                    placeholder="House number and street name" required>
+                                <label for="street_address">House number and street</label>
+                                <input type="text" id="street_address" name="street_address" class="form-input" value="<?= checkoutValue($values, 'street_address') ?>" autocomplete="street-address" required>
                             </div>
+                            <?php if ($values['barangay'] || $values['province'] || $values['region']): ?>
+                                <p class="saved-location">
+                                    <strong>Saved location:</strong>
+                                    <?= htmlspecialchars(implode(', ', array_filter([$values['barangay'], $values['city'], $values['province'], $values['region']]))) ?>
+                                    · <a href="Profile.php">Edit in My Profile</a>
+                                </p>
+                            <?php endif; ?>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="city">City</label>
-                                    <input type="text" id="city" name="city" class="form-input" required>
+                                    <label for="city">City / municipality</label>
+                                    <input type="text" id="city" name="city" class="form-input" value="<?= checkoutValue($values, 'city') ?>" autocomplete="address-level2" readonly required>
                                 </div>
-                                <div class="form-group">
-                                    <label for="zip">ZIP Code</label>
-                                    <input type="text" id="zip" name="zip" class="form-input" required>
+                                <div class="form-group form-group-small">
+                                    <label for="postal_code">Postal code</label>
+                                    <input type="text" id="postal_code" name="postal_code" class="form-input" value="<?= checkoutValue($values, 'postal_code') ?>" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="postal-code" required>
                                 </div>
                             </div>
-                        </div>
+                        </section>
 
-                        <div class="form-section">
-                            <h3 class="form-title">Payment Method</h3>
-                            <label class="payment-option">
-                                <input type="radio" name="payment_method" value="card" checked required>
-                                <span class="payment-label">Credit / Debit Card</span>
-                            </label>
-                            <label class="payment-option">
-                                <input type="radio" name="payment_method" value="gcash" required>
-                                <span class="payment-label">GCash</span>
-                            </label>
-                            <label class="payment-option">
-                                <input type="radio" name="payment_method" value="cod" required>
-                                <span class="payment-label">Cash on Delivery (COD)</span>
-                            </label>
-                        </div>
+                        <section class="form-section payment-section-form">
+                            <div class="form-section-heading"><span>3</span><div><h2 class="form-title">Payment method</h2><p>No live payment API is connected yet. Your selection will be recorded as pending.</p></div></div>
+                            <?php
+                            $paymentOptions = [
+                                'cod' => ['Cash on Delivery', 'Pay when your parcel arrives.'],
+                                'gcash' => ['GCash', 'Manual payment confirmation will be required.'],
+                                'card' => ['Credit / Debit Card', 'Card processing will be connected in a later phase.'],
+                            ];
+                            foreach ($paymentOptions as $method => [$label, $description]):
+                            ?>
+                                <label class="payment-option">
+                                    <input type="radio" name="payment_method" value="<?= $method ?>" <?= $values['payment_method'] === $method ? 'checked' : '' ?> required>
+                                    <span class="payment-radio" aria-hidden="true"></span>
+                                    <span><strong><?= htmlspecialchars($label) ?></strong><small><?= htmlspecialchars($description) ?></small></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </section>
                     </div>
 
-                    <div class="checkout-summary">
-                        <h3 class="summary-title">Your Order</h3>
-
+                    <aside class="checkout-summary">
+                        <h2 class="summary-title">Order summary</h2>
                         <div class="summary-items">
-                            <?php if (empty($cart_items)): ?>
-                                <p>Your cart is empty.</p>
+                            <?php if (!$items): ?>
+                                <div class="empty-checkout">
+                                    <strong>Your cart is empty.</strong>
+                                    <a href="shop.php">Continue shopping</a>
+                                </div>
                             <?php else: ?>
-                                <?php foreach ($cart_items as $item): ?>
-                                    <div class="summary-item">
-                                        <img src="<?php echo htmlspecialchars($item['image_path']); ?>"
-                                            alt="<?php echo htmlspecialchars($item['product_name']); ?>"
-                                            class="summary-item-img">
+                                <?php foreach ($items as $item): ?>
+                                    <article class="summary-item">
+                                        <img src="<?= htmlspecialchars(appUrl($item['image_path'])) ?>" alt="<?= htmlspecialchars($item['product_name']) ?>" class="summary-item-img">
                                         <div class="summary-item-details">
-                                            <p class="summary-item-name"><?php echo htmlspecialchars($item['product_name']); ?>
-                                            </p>
-                                            <p class="summary-item-meta">Color: <?php echo htmlspecialchars($item['color']); ?>
-                                                | Size: <?php echo htmlspecialchars($item['size']); ?></p>
-                                            <p class="summary-item-meta">Qty: <?php echo $item['quantity']; ?></p>
+                                            <p class="summary-item-name"><?= htmlspecialchars($item['product_name']) ?></p>
+                                            <p class="summary-item-meta"><?= htmlspecialchars($item['color']) ?> · <?= htmlspecialchars($item['size']) ?> · Qty <?= (int) $item['quantity'] ?></p>
+                                            <?php if ((int) $item['stock_quantity'] < (int) $item['quantity']): ?><p class="stock-warning">Insufficient stock</p><?php endif; ?>
                                         </div>
-                                        <p class="summary-item-price">
-                                            ₱<?php echo number_format($item['price'] * $item['quantity'], 2); ?></p>
-                                    </div>
+                                        <p class="summary-item-price">₱<?= number_format((float) $item['price'] * (int) $item['quantity'], 2) ?></p>
+                                    </article>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
-
-                        <div class="summary-row">
-                            <span>Subtotal</span>
-                            <span>₱<?php echo number_format($subtotal, 2); ?></span>
-                        </div>
-                        <div class="summary-row">
-                            <span>Standard Shipping</span>
-                            <span>₱<?php echo number_format($shipping, 2); ?></span>
-                        </div>
-
-                        <div class="summary-total">
-                            <span>Total</span>
-                            <span>₱<?php echo number_format($total, 2); ?></span>
-                        </div>
-
-                        <button type="submit" class="btn-place-order">Place Order</button>
-                    </div>
-
+                        <div class="summary-row"><span>Subtotal</span><span>₱<?= number_format($totals['subtotal'], 2) ?></span></div>
+                        <div class="summary-row"><span>Standard shipping</span><span>₱<?= number_format($totals['shipping'], 2) ?></span></div>
+                        <div class="summary-total"><span>Total</span><span>₱<?= number_format($totals['total'], 2) ?></span></div>
+                        <button type="submit" class="btn-place-order" <?= !$items || $hasStockProblem ? 'disabled' : '' ?>>Place order securely</button>
+                        <p class="checkout-assurance">Inventory and pricing are checked again before the order is created.</p>
+                    </aside>
                 </div>
             </form>
         </section>
     </main>
 
-    <?php
-    $path = '';
-    include 'includes/footer.php';
-    ?>
+    <?php $path = ''; include 'includes/footer.php'; ?>
+    <script>
+        document.getElementById('checkout-form')?.addEventListener('submit', function () {
+            const button = this.querySelector('.btn-place-order');
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Placing order...';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,7 +1,9 @@
 <?php
-session_start();
-require_once 'includes/db.php';
-$pdo = getDbConnection();
+require_once __DIR__ . '/../../src/middleware/authentication.php';
+require_once __DIR__ . '/../../src/models/product.php';
+require_once __DIR__ . '/includes/db.php';
+
+$customer = requireLoginOrRedirect();
 
 if (!isset($_GET['id'])) {
     echo "<p>Error: No product selected.</p>";
@@ -10,11 +12,7 @@ if (!isset($_GET['id'])) {
 
 $id = (int)$_GET['id'];
 
-$stmt = $pdo->prepare("SELECT * FROM products p 
-                       JOIN product_variants v ON p.product_id = v.product_id 
-                       WHERE p.product_id = ?");
-$stmt->execute([$id]);
-$variants = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$variants = Product::variants($id, $pdo);
 
 if (!$variants) {
     echo "<p>Sorry, product details are currently unavailable.</p>";
@@ -36,6 +34,15 @@ function displaySizeWithUnit($size) {
 
 $colors = array_unique(array_column($variants, 'color'));
 $sizes = array_unique(array_column($variants, 'size'));
+$defaultColor = (string) $product['color'];
+$defaultSize = (string) $product['size'];
+$variantOptions = array_map(
+    static fn (array $variant): array => [
+        'color' => (string) $variant['color'],
+        'size' => (string) $variant['size'],
+    ],
+    $variants
+);
 
 $colorHexMap = [
     'Black' => '#000000', 'White' => '#FFFFFF', 'Off White' => '#f8f8f2',
@@ -50,7 +57,7 @@ $colorHexMap = [
 ?>
 
 <div style="text-align: center;">
-    <img src="<?php echo htmlspecialchars($product['image_path']); ?>" alt="<?php echo htmlspecialchars($product['product_name']); ?>" style="width: 150px; border-radius: 8px;">
+    <img src="<?= htmlspecialchars(appUrl($product['image_path'])) ?>" alt="<?php echo htmlspecialchars($product['product_name']); ?>" style="width: 150px; border-radius: 8px;">
     
     <h3 style="color: var(--maroon); margin-top: 15px; margin-bottom: 5px;">
         <?php echo htmlspecialchars($product['product_name']); ?>
@@ -62,20 +69,22 @@ $colorHexMap = [
     </p>
 </div>
 
-<form action="addToCart.php" method="POST" style="display: flex; flex-direction: column;">
+<form action="<?= htmlspecialchars(appUrl('store/addToCart.php')) ?>" method="POST" id="product-order-form" data-variants="<?= htmlspecialchars(json_encode($variantOptions), ENT_QUOTES, 'UTF-8') ?>" style="display: flex; flex-direction: column;">
     <input type="hidden" name="product_id" value="<?php echo $id; ?>">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrfToken()) ?>">
     
     <div class="variant-grid-container">
         <!-- LEFT COLUMN: COLORS -->
         <div class="variant-column">
-            <p class="variant-label">Color: <span id="display-color" class="selected-text"></span></p>
+            <p class="variant-label">Color: <span data-display-color class="selected-text"><?= htmlspecialchars(strtoupper($defaultColor)) ?></span></p>
             <div class="custom-radio-group">
                 <?php foreach ($colors as $color): 
                     $cssColor = $colorHexMap[$color] ?? '#ccc'; 
                 ?>
                     <label class="color-swatch-label">
-                        <input type="radio" name="color" value="<?php echo htmlspecialchars($color); ?>" required onchange="updateSelection('display-color', this.value)">
+                        <input type="radio" name="color" value="<?php echo htmlspecialchars($color); ?>" <?= $color === $defaultColor ? 'checked' : '' ?> required>
                         <span class="color-swatch" style="background: <?php echo $cssColor; ?>;" title="<?php echo htmlspecialchars($color); ?>"></span>
+                        <span class="color-name"><?php echo htmlspecialchars($color); ?></span>
                     </label>
                 <?php endforeach; ?>
             </div>
@@ -83,11 +92,11 @@ $colorHexMap = [
 
         <!-- RIGHT COLUMN: SIZES -->
         <div class="variant-column">
-            <p class="variant-label">Size: <span id="display-size" class="selected-text"></span></p>
+            <p class="variant-label">Size: <span data-display-size class="selected-text"><?= htmlspecialchars(strtoupper(displaySizeWithUnit($defaultSize))) ?></span></p>
             <div class="custom-radio-group">
                 <?php foreach ($sizes as $size): ?>
                     <label class="size-box-label">
-                        <input type="radio" name="size" value="<?php echo htmlspecialchars($size); ?>" required onchange="updateSelection('display-size', this.nextElementSibling.innerText)">
+                        <input type="radio" name="size" value="<?php echo htmlspecialchars($size); ?>" <?= $size === $defaultSize ? 'checked' : '' ?> required>
                         <span class="size-box"><?php echo htmlspecialchars(displaySizeWithUnit($size)); ?></span>
                     </label>
                 <?php endforeach; ?>
@@ -103,9 +112,3 @@ $colorHexMap = [
         <button type="submit" name="action" value="checkout" class="btn-cart-submit" style="flex: 1;">Buy Now</button>
     </div>
 </form>
-
-<script>
-function updateSelection(elementId, value) {
-    document.getElementById(elementId).innerText = value.toUpperCase();
-}
-</script>
